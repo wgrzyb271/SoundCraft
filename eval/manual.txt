@@ -1,0 +1,12 @@
+Instrukcja
+
+1. konfiguracja config.yaml wedle uznania
+2. ./install.sh 
+
+    lub na windows
+
+python3 -m venv .venv
+
+source .venv/bin/activate
+
+pip install -r requirements.txt

@@ -1,0 +1,6 @@
+model_name: "Demucs"
+outputs_dir: "./demucs_outputs"
+reference_dir: "./musdb18_test"
+inference_times: "./inference_times.json"
+output: "results.csv"
+summary_output: "summary_results.csv"
