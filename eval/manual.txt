@@ -1,12 +1,162 @@
-Instrukcja
+=============================================================================
+EVALUATOR BENCHMARKU SEPARACJI ŹRÓDEŁ AUDIO — INSTRUKCJA
+=============================================================================
 
-1. konfiguracja config.yaml wedle uznania
-2. ./install.sh 
+Ten skrypt (evaluator.py) liczy metryki jakości separacji dla Twojego modelu
+(SDR, SI-SDR, PQ, CE, CU) i zapisuje wyniki w formacie zgodnym z benchmark
+protocol v1.0. Każdy dev uruchamia go na outpucie swojego modelu — dzięki
+temu wszyscy dostają wyniki policzone dokładnie tym samym kodem.
 
-    lub na windows
 
-python3 -m venv .venv
+-----------------------------------------------------------------------------
+1. INSTALACJA
+-----------------------------------------------------------------------------
 
-source .venv/bin/activate
+macOS / Linux:
 
-pip install -r requirements.txt
+    ./install.sh
+
+Windows (albo jeśli install.sh nie działa / nie masz uprawnień do uruchamiania
+skryptów):
+
+    python3 -m venv .venv
+    source .venv/bin/activate      (Windows: .venv\Scripts\activate)
+    pip install -r requirements.txt
+
+Po instalacji pamiętaj, żeby zawsze aktywować .venv przed uruchomieniem
+skryptu (widać to po prefiksie "(.venv)" w terminalu):
+
+    source .venv/bin/activate
+
+
+-----------------------------------------------------------------------------
+2. STRUKTURA KATALOGÓW (przygotuj PRZED uruchomieniem)
+-----------------------------------------------------------------------------
+
+Musisz mieć dwa katalogi obok evaluator.py:
+
+reference-dir/                  ← ground truth z MUSDB18, wspólny dla wszystkich
+├── track_001/
+│   ├── vocals.wav
+│   ├── drums.wav
+│   ├── bass.wav
+│   └── other.wav
+├── track_002/
+└── ...
+
+outputs-dir/                    ← output TWOJEGO modelu
+├── track_001/
+│   ├── vocals.wav             (tylko te stemy, które Twój model wspiera)
+│   ├── drums.wav
+│   ├── bass.wav
+│   └── other.wav
+├── track_002/
+└── ...
+
+WAŻNE: nazwy utworów (track_001, track_002, ...) muszą się zgadzać
+między obydwoma katalogami. Jeśli Twój model nie obsługuje jakiegoś
+źródła (np. nie robi "other"), po prostu nie twórz tego pliku —
+skrypt sam to wykryje i oznaczy jako "not_supported", zamiast się wywalić.
+
+
+-----------------------------------------------------------------------------
+3. KONFIGURACJA (config.yaml)
+-----------------------------------------------------------------------------
+
+Skonfiguruj plik config.yaml wedle uznania:
+
+    model_name: "Demucs"
+    outputs_dir: "./demucs_outputs"
+    reference_dir: "./musdb18_test"
+    inference_times: "./inference_times.json"   (opcjonalnie, patrz pkt 5)
+    output: "results.csv"
+    summary_output: "summary_results.csv"
+
+Jeśli plik nazywa się dokładnie "config.yaml" i leży w katalogu, z którego
+odpalasz skrypt, NIE musisz podawać żadnych flag w terminalu — wystarczy:
+
+    python3 evaluator.py
+
+Możesz też podać inną nazwę/lokalizację configu:
+
+    python3 evaluator.py --config sciezka/do/innego_configu.yaml
+
+Każda flaga podana ręcznie w terminalu nadpisuje wartość z config.yaml,
+np. żeby podmienić tylko nazwę modelu bez edytowania pliku:
+
+    python3 evaluator.py --model-name Demucs-v2
+
+
+-----------------------------------------------------------------------------
+4. URUCHOMIENIE
+-----------------------------------------------------------------------------
+
+    python3 evaluator.py
+
+Skrypt wypisze na bieżąco wyniki dla każdego utworu/stemu, np.:
+
+    [Demucs] track_001/vocals: SDR=13.97 SI-SDR=13.99 PQ=5.14 CE=2.33 CU=5.78
+
+Na końcu zapisze dwa pliki:
+
+    results.csv          → surowe wyniki per utwór/stem (cały test set)
+    summary_results.csv  → mean/median/std per stem (podsumowanie zbiorcze)
+
+
+-----------------------------------------------------------------------------
+5. (OPCJONALNIE) CZAS INFERENCJI
+-----------------------------------------------------------------------------
+
+Evaluator NIE uruchamia Twojego modelu — tylko ocenia gotowe pliki. Jeśli
+chcesz, żeby w results.csv pojawiła się kolumna inference_time_sec, sam
+zmierz czas separacji dla każdego utworu i zapisz do JSON-a:
+
+    {
+      "track_001": 12.34,
+      "track_002": 9.87
+    }
+
+Przykład pomiaru w Pythonie podczas odpalania modelu:
+
+    import time, json
+    times = {}
+    for track in tracks:
+        start = time.time()
+        run_model_separation(track)
+        times[track] = time.time() - start
+    json.dump(times, open("inference_times.json", "w"), indent=2)
+
+Następnie podaj ścieżkę w config.yaml (pole "inference_times") albo flagą:
+
+    python3 evaluator.py --inference-times ./inference_times.json
+
+
+-----------------------------------------------------------------------------
+6. CO ROBIĆ, JEŚLI CZEGOŚ BRAKUJE
+-----------------------------------------------------------------------------
+
+Skrypt nie wywali się, jeśli brakuje "miękkich" zależności (museval,
+audiobox_aesthetics) — po prostu odpowiednie kolumny (SDR / PQ,CE,CU)
+zostaną puste, z ostrzeżeniem w terminalu. Jeśli je zobaczysz:
+
+    pip install -r requirements.txt
+
+Pierwsze uruchomienie pobiera model AudioBox-Aesthetics z Hugging Face
+(kilkaset MB) — to normalne, dzieje się tylko raz, potem model jest
+cache'owany lokalnie.
+
+
+-----------------------------------------------------------------------------
+7. GOTOWA STRUKTURA DO WRZUCENIA NA GITHUBA
+-----------------------------------------------------------------------------
+
+Zgodnie z protokołem, po zakończeniu benchmarku dorzuć do repo:
+
+<model_name>/
+├── README.md          (opis modelu, wersja, preprocessing, wnioski)
+├── results.csv
+├── summary_results.csv
+└── audio/
+    ├── track_001/      (tylko output dla 5 wspólnie wybranych utworów)
+    ├── track_002/
+    └── ...
