@@ -34,7 +34,11 @@ Agregaty (mean/median/std): `summary_results.csv`
 ## Analiza jakościowa
 
 ### Wybrane utwory
-_(do uzupełnienia po ustaleniu 5 utworów)_
+- track_001: Timboz - Pony
+- track_002: Skelpolu - Resurrection
+- track_003: Side Effects Project - Sing With Me
+- track_004: Girls Under Glass - We Feel Alright
+- track_005: Al James - Schoolboy Facination
 
 ### Analiza liczbowa
 
@@ -182,5 +186,36 @@ W wielu utworach widać bardzo duży rozrzut między stemami:
 - PQ, CE, CU nie zastępują SDR/SI-SDR – mierzą co innego. Wysokie PQ nie znaczy, że separacja jest dobra (patrz: other).
 - Dla porównania modeli w benchmarku SDR i SI-SDR są kluczowe, a PQ/CE/CU to uzupełnienie.
 
-### Analiza odsłuchowa
-_(do uzupełnienia po ustaleniu 5 utworów)_
+### Obserwacje po odsłuchu
+
+**Wokale:**
+- Generalnie wychodzą dobrze – instrumenty nie przebijają się przez wokal.
+- W większości utworów słychać lekki pogłos i szum, ale wokal pozostaje czytelny.
+- **Skelpolu – Resurrection**: wokal jest praktycznie nieużyteczny – słychać dźwięki, które nie przypominają wokalu i których nie powinno tam być. To potwierdza metryki: SDR 0.24, SI-SDR -12.11 (najgorszy wynik w całym teście).
+- **Side Effects Project – Sing With Me**: wokal dobry, czysty – potwierdza to SDR 9.07.
+- **Timboz – Pony**: wokal przeciętny, słychać lekkie zniekształcenia – metryki: SDR 4.00, SI-SDR 2.45.
+
+**Perkusja:**
+- Dobrze wyseparowana, nie słychać innych instrumentów w tle.
+- Brzmi dość czysto, ale w niektórych utworach (np. **Timboz – Pony**) talerze są przytłumione – metryki: SDR 2.85, SI-SDR -0.51 (estymata gorsza niż odtworzenie mieszanki).
+- **Side Effects Project – Sing With Me**: perkusja bardzo dobra – SDR 10.89, SI-SDR 10.99.
+- **Skelpolu – Resurrection**: perkusja dobra – SDR 6.38.
+
+**Bass:**
+- W niektórych utworach działa dobrze (np. **Skelpolu – Resurrection**: SDR 10.19), w innych bardzo słabo.
+- **Timboz – Pony**: bass mocno zanika i buczy – SDR 0.91, SI-SDR -3.08. Porównując z oryginałem, powinno być znacznie lepiej.
+- **Girls Under Glass – We Feel Alright**: bas słabo wyłapany – SDR 3.85, SI-SDR 1.46.
+- W większości utworów bas nie jest zanieczyszczony innymi instrumentami – problem leży raczej w utracie barwy i dynamiki.
+
+**Other:**
+- Wychodzi w miarę podobnie do oryginału – instrumenty, które powinny być w innych stemach, raczej nie przenikają do „other”.
+- **Side Effects Project – Sing With Me**: najgorzej – SI-SDR -3.18.
+- **Al James – Schoolboy Facination**: SI-SDR -2.42, również zanieczyszczone.
+
+### Podsumowanie
+
+- **Spleeter radzi sobie najlepiej z perkusją i wokalem**
+- **Bass i „other” są najsłabsze**
+- **Wyniki silnie zależą od charakteru utworu**
+- **Metryki pokrywają się z odsłuchem** – tam, gdzie SDR/SI-SDR są niskie, słychać wyraźne problemy (buczenie basu, zniekształcony wokal, resztki innych instrumentów w „other”).
+- **Ogólna ocena**: Spleeter sprawdza się jako narzędzie do szybkiego prototypowania, ale w zastosowaniach produkcyjnych wymaga dodatkowej obróbki (post-processing) lub użycia nowszego modelu.
