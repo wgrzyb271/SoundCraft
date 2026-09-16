@@ -1,0 +1,14 @@
+# Wymaga Python >= 3.11
+soundfile
+numpy<2.0.0
+pyyaml
+musdb
+museval
+audiobox_aesthetics
+torch>=2.5.0
+torchaudio>=2.5.0
+huggingface_hub
+python-dotenv
+git+https://github.com/facebookresearch/sam-audio.git
+git+https://github.com/facebookresearch/ImageBind.git
+git+https://github.com/facebookresearch/dacvae.git
