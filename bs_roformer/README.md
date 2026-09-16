@@ -11,9 +11,8 @@
 * **Tryb inferencji**: GPU, mixed precision FP16
 * **Flash Attention**: włączone
 
-```
 
-## odowisko
+## Środowisko
 
 Inferencja modelu została wykonana na infrastrukturze WCSS przy użyciu SLURM.
 
