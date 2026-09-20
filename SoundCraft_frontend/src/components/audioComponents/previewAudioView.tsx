@@ -17,7 +17,6 @@ export function AudioPreview({
     const [originalAudioUrl, setOriginalAudioUrl] = useState<string | null>(null);
     const [currentChangesUrl, setCurrentChangesUrl] = useState<string | null>(null);
 
-    // Original audio URL
     useEffect(() => {
         if (!originalAudioFile) {
             setOriginalAudioUrl(null);
@@ -48,7 +47,6 @@ export function AudioPreview({
 
     return (
         <>
-            {/* Original audio */}
             <fieldset className="audio-div">
                 <legend className="audio-div-title manrope-regular">Original audio</legend>
                 <div className="audio-center-div">
@@ -76,7 +74,6 @@ export function AudioPreview({
                 </div>
             </fieldset>
 
-            {/* Current changes */}
             <fieldset className="audio-div">
                 <legend className="audio-div-title manrope-regular"> Current audio changes</legend>
                 <div className="audio-center-div">
