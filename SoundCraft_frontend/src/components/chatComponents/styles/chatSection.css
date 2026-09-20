@@ -1,11 +1,9 @@
 .chat-section{
-    background-color: cadetblue;
-    width: 30vw;
-    margin: 8px;
+    width: 28vw;
     display:flex;
     flex-direction: column;
-    border-radius: 12px;
     overflow: hidden;
+    border-right: rgba(96, 35, 134, 0.3) 1px solid;
 
 }
 
@@ -14,18 +12,19 @@
 
     display: flex;
     flex-direction: column;
-    
-    gap: 10px;
-    padding: 16px;
+    gap: 8px;
+    padding: 12px;
     overflow-y: auto;
-    background-color: rgb(83, 138, 139);
+
+    background: #131115;
+    background: linear-gradient(180deg, #131115 60%, #1F1726 100%);
 }
 .user-input-div {
     padding: 12px;
 
-    background-color: #1b1b1b;
+    background-color:#211829;
 
-    border-top: 1px solid #333;
+    border-top: 1px solid rgba(96, 35, 134, 0.3);
 }
 
 .user-input-div form {
@@ -41,28 +40,38 @@
     border: none;
     border-radius: 8px;
 
-    background-color: #303030;
+    background-color: rgb(19, 17, 21);
     color: white;
 
     outline: none;
 }
 
 .user-input-div input[type="text"]:focus {
-    outline: 1px solid #555;
+    outline: 1px #131115;
 }
 
-.user-input-div input[type="submit"] {
-    padding: 10px 16px;
 
-    border: none;
-    border-radius: 8px;
+.submit-button {
+    background-color: transparent;
+    border: 1px solid hsla(277, 64%, 39%, 0.699);;
+    border-radius: 50%;
 
-    background-color: #4a90e2;
-    color: white;
+    width: 42px;
+    height: 42px;
 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 8px;
     cursor: pointer;
 }
 
-.user-input-div input[type="submit"]:hover {
-    background-color: #357abd;
+.submit-button:hover {
+    background-color: #2a1c36;
+}
+
+.submit-button img {
+    width: 20px;
+    height: 20px;
 }

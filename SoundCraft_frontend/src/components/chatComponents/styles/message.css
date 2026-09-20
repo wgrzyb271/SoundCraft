@@ -1,13 +1,9 @@
 .message-user-div {
     align-self: flex-end;
-
     max-width: 70%;
-
     padding: 10px 14px;
-
-    background-color: #4a90e2;
+    background-color: #691f97;
     color: white;
-
     border-radius: 16px 16px 4px 16px;
 }
 
@@ -18,9 +14,11 @@
 
     padding: 10px 14px;
 
-    background-color: #3a3a3a;
+    background-color: #1a171d;
     color: white;
-
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgba(96, 35, 134, 0.699);
     border-radius: 16px 16px 16px 4px;
 }
 

@@ -1,5 +1,5 @@
 import './styles/message.css'
-
+import '../../fontStylesheet.css'
 type MessageProps= {
     sender: "user"|"agent", 
     messageValue:string, 
@@ -7,7 +7,7 @@ type MessageProps= {
 
 export function Message({sender, messageValue}:MessageProps){
     return (
-        <div className={`message-${sender}-div`}>
+        <div className={`message-${sender}-div manrope-regular`}>
             <p> {messageValue}</p>
         </div>
     )
