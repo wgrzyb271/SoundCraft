@@ -1,0 +1,32 @@
+.message-user-div {
+    align-self: flex-end;
+
+    max-width: 70%;
+
+    padding: 10px 14px;
+
+    background-color: #4a90e2;
+    color: white;
+
+    border-radius: 16px 16px 4px 16px;
+}
+
+.message-agent-div {
+    align-self: flex-start;
+
+    max-width: 70%;
+
+    padding: 10px 14px;
+
+    background-color: #3a3a3a;
+    color: white;
+
+    border-radius: 16px 16px 16px 4px;
+}
+
+.message-user-div p,
+.message-agent-div p {
+    margin: 0;
+
+    overflow-wrap: break-word;
+}
