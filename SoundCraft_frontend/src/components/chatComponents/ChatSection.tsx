@@ -2,6 +2,7 @@ import './styles/chatSection.css'
 import { Message } from './Massage'
 import { useState, useEffect, useRef } from 'react'
 import uploadIcon from '../../assets/send_icon.svg'
+import '../../fontStylesheet.css'
 
 type ChatMessage ={
     sender: "user"|"agent"
@@ -70,7 +71,7 @@ export function ChatSection(){
             </div>
             <div className = "user-input-div">
                 <form onSubmit={handleSubmitUserMassage}>
-                    <input type="text" placeholder='Message...' value={userMassage} onChange={e=>setUserMassage(e.target.value)}>
+                    <input className="manrope-regular" type="text" placeholder='Message...' value={userMassage} onChange={e=>setUserMassage(e.target.value)}>
                     </input>
                     <button type="submit" className="submit-button">
                         <img src={uploadIcon} alt="Send" />

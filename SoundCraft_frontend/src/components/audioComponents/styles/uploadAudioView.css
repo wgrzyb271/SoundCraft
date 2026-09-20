@@ -12,7 +12,7 @@
 
 .audio-upload-box {
     width: min(600px, 90%);
-    min-height: 300px;
+    min-height: 60vh;
 
     display: flex;
     flex-direction: column;
@@ -58,8 +58,6 @@
     color: white;
 
     font-size: 20px;
-    font-weight: 600;
-
     margin-bottom: 8px;
 }
 
@@ -67,7 +65,6 @@
     color: rgba(255, 255, 255, 0.55);
 
     font-size: 14px;
-
     margin-bottom: 24px;
 }
 
