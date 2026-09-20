@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { AudioVisualizer } from "react-audio-visualize";
 import AudioPlayer from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
+import './styles/audioPreview.css'
+import '../../fontStylesheet.css'
 
 type AudioPreviewProps = {
     originalAudioFile: File | null;
@@ -30,7 +32,6 @@ export function AudioPreview({
         };
     }, [originalAudioFile]);
 
-    // Current/changed audio URL
     useEffect(() => {
         if (!currentChangesAudioFile) {
             setCurrentChangesUrl(null);
@@ -46,46 +47,63 @@ export function AudioPreview({
     }, [currentChangesAudioFile]);
 
     return (
-        <section>
+        <>
             {/* Original audio */}
-            <div className="audio-div">
-                {originalAudioFile && (
+            <fieldset className="audio-div">
+                <legend className="audio-div-title manrope-regular">Original audio</legend>
+                <div className="audio-center-div">
+                    {originalAudioFile && (
+                    <div className = "visualizer-wrapper">
                     <AudioVisualizer
                         blob={originalAudioFile}
                         width={750}
                         height={75}
+                        barColor={"rgba(221, 221, 221, 0.5)"}
                     />
+                    </div>
                 )}
 
                 {originalAudioUrl && (
                     <AudioPlayer
                         autoPlay={false}
                         src={originalAudioUrl}
-                        onPlay={() => console.log("onPlay")}
+                        showFilledVolume={true}
+                        onPlay={() => console.log("onPlay")
+                        }
                     />
                 )}
-            </div>
+
+                </div>
+            </fieldset>
 
             {/* Current changes */}
-            <div className="audio-div">
+            <fieldset className="audio-div">
+                <legend className="audio-div-title manrope-regular"> Current audio changes</legend>
+                <div className="audio-center-div">
                 {currentChangesAudioFile && currentChangesUrl ? (
                     <>
+                        <div className = "visualizer-wrapperr">
                         <AudioVisualizer
                             blob={currentChangesAudioFile}
                             width={750}
                             height={75}
                         />
-
+                        </div>
                         <AudioPlayer
                             autoPlay={false}
                             src={currentChangesUrl}
+                            showFilledVolume={true}
                             onPlay={() => console.log("onPlay")}
                         />
                     </>
                 ) : (
-                    <p>No current changes to display</p>
+                    <div className ="current-audio-disclaimer-div">
+                    <p className = "current-audio-disclaimer-p manrope-light">No current changes to display</p>
+                    <p className = "current-audio-disclaimer-p manrope-light"> Make an adjustment to the audio to see the updated waveform here.</p>
+                    </div>
                 )}
-            </div>
-        </section>
+                </div>
+            </fieldset>
+        </>
     );
 }

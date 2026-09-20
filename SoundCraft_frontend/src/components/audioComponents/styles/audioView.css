@@ -1,9 +1,13 @@
-.audio-preview-section{
-    margin: 8px;
-    width: 70vw;
-    border-radius: 8px;
-
-    background-color: rgb(83, 138, 139);
-    color:azure;
+.audio-preview-section {
+    width: 72vw;
+    height: 100%;
+    background: #131115;
+    background: linear-gradient(180deg, rgba(19, 17, 21, 1) 0%, rgba(29, 22, 35, 1) 100%);
     padding: 16px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    align-items: center;
 }
