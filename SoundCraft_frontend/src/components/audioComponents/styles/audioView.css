@@ -1,0 +1,9 @@
+.audio-preview-section{
+    margin: 8px;
+    width: 70vw;
+    border-radius: 8px;
+
+    background-color: rgb(83, 138, 139);
+    color:azure;
+    padding: 16px;
+}
