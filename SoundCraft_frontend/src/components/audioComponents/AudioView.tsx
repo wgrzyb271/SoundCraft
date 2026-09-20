@@ -10,7 +10,6 @@ export function AudioView() {
         <section className="audio-preview-section">
             {audioFile ? (
                 <>
-                    <p>Selected: {audioFile.name}</p>
                     <AudioPreview originalAudioFile={audioFile} currentChangesAudioFile={null}></AudioPreview>
                 </>
             ) : (
