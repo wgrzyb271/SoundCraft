@@ -1,5 +1,6 @@
 import uploadIcon from "../../assets/upload_icon.svg";
 import "./styles/uploadAudioView.css";
+import "../../fontStylesheet.css"
 
 type AudioFileProps = {
     setAudioFile: (file: File | null) => void;
@@ -19,15 +20,15 @@ export function AudioUploader({ setAudioFile }: AudioFileProps) {
                     alt=""
                 />
 
-                <span className="audio-upload-title">
+                <span className="manrope-regular audio-upload-title">
                     Upload an audio file
                 </span>
 
-                <span className="audio-upload-description">
+                <span className="manrope-regular audio-upload-description">
                     here will be supported audio file extensions
                 </span>
 
-                <span className="audio-upload-button">
+                <span className="manrope-regular audio-upload-button">
                     Choose file
                 </span>
 

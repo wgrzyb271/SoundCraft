@@ -7,7 +7,7 @@ type MessageProps= {
 
 export function Message({sender, messageValue}:MessageProps){
     return (
-        <div className={`message-${sender}-div manrope-regular`}>
+        <div className={`manrope-regular message-${sender}-div`}>
             <p> {messageValue}</p>
         </div>
     )
