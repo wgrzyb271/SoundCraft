@@ -1,0 +1,23 @@
+.toolbar{
+    width:100%;
+    height: 12vh;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: rgb(19, 17, 21);
+    border-bottom: rgba(96, 35, 134, 0.3) 1px solid;
+}
+
+.header-p{
+    margin:0;
+    color: #ffffff;
+    padding-left: 24px;
+    font-size:32px;
+}
+.subheader-p{
+    margin:0;
+    color: hsla(277, 83%, 91%, 0.709);
+    padding-right:  16px;
+    font-size:18px;
+}
