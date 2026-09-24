@@ -1,6 +1,0 @@
-model_name: "SamAudio"
-outputs_dir: "./samaudio_outputs"
-reference_dir: "./musdb18_test_wav"
-inference_times: "./samaudio_inference_times.json"
-output: "samaudio_results.csv"
-summary_output: "samaudio_summary.csv"
