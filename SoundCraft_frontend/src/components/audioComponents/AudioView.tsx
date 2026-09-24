@@ -3,8 +3,9 @@ import "./styles/audioView.css";
 import { AudioUploader } from "./UploadAudioView";
 import { AudioPreview } from "./PreviewAudioView";
 
-export function AudioView() {
-    const [audioFile, setAudioFile] = useState<File | null>(null);
+type AudioViewProps = { audioFile: File | null; setAudioFile: (file: File | null) => void; };
+
+export function AudioView({audioFile, setAudioFile}:AudioViewProps) {
     const [currentAudioFile, setCurrentAudioFile] = useState<File | null>(null);
 
     return (

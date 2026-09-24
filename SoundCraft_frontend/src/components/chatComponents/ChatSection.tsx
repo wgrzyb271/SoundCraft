@@ -21,7 +21,11 @@ function generateAgentResponse(length: number = 20): string {
     return result
 }
 
-export function ChatSection(){
+type ChatSectionProps = {
+    onPromptSubmit: (prompt: string) => void;
+};
+
+export function ChatSection({onPromptSubmit}:ChatSectionProps){
     const messagesEndRef = useRef<HTMLDivElement>(null)
      const [userMassage, setUserMassage] = useState('')
      
@@ -42,6 +46,8 @@ export function ChatSection(){
         if(!userMassage.trim()){
             return
         }
+
+        onPromptSubmit(userMassage)
 
         setMessages(prev => [
             ...prev,
