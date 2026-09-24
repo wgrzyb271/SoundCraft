@@ -9,23 +9,13 @@ type ChatMessage ={
     messageValue:string
 }
 
-function generateAgentResponse(length: number = 20): string {
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-    let result = ''
-
-    for (let i = 0; i < length; i++) {
-        const randomIndex = Math.floor(Math.random() * letters.length)
-        result += letters[randomIndex]
-    }
-
-    return result
-}
 
 type ChatSectionProps = {
     onPromptSubmit: (prompt: string) => void;
+    agentResponse: Record<string, unknown> | null
 };
 
-export function ChatSection({onPromptSubmit}:ChatSectionProps){
+export function ChatSection({onPromptSubmit, agentResponse}:ChatSectionProps){
     const messagesEndRef = useRef<HTMLDivElement>(null)
      const [userMassage, setUserMassage] = useState('')
      
@@ -40,6 +30,21 @@ export function ChatSection({onPromptSubmit}:ChatSectionProps){
          messagesEndRef.current?.scrollIntoView({
             behavior: 'smooth'})}, [messages])
 
+    useEffect(()=>{
+        if(!agentResponse) return;
+        const message = typeof agentResponse.message==="string"? agentResponse.message
+        : JSON.stringify(agentResponse);
+
+        setMessages(prev => [
+            ...prev,
+            {sender:"agent",
+            messageValue:message
+            }
+        ])
+
+
+    },[agentResponse])
+
 
      const handleSubmitUserMassage = (e: React.FormEvent<HTMLFormElement>)=>{
         e.preventDefault();
@@ -47,7 +52,6 @@ export function ChatSection({onPromptSubmit}:ChatSectionProps){
             return
         }
 
-        onPromptSubmit(userMassage)
 
         setMessages(prev => [
             ...prev,
@@ -55,14 +59,9 @@ export function ChatSection({onPromptSubmit}:ChatSectionProps){
             messageValue:userMassage
             }
         ])
-        const response = generateAgentResponse() //in the future here will be async
-        setMessages(prev => [
-            ...prev,
-            {sender:"agent",
-            messageValue:response
-            }
-        ])
 
+
+        onPromptSubmit(userMassage)
         setUserMassage('')
      }
     return (
