@@ -1,0 +1,45 @@
+# models.yaml — rejestr modeli audio (szkic wg sekcji 4.1 dokumentu architektury, v8).
+# Orkiestrator tylko CZYTA ten plik (list_available_models); kolejności rankingu nie zmienia.
+
+ranking:
+  data_snapshot: "2026-09-24"   # zaktualizowano po dołączeniu all_models.csv z wynikami Demucs i Open-Unmix
+  weights: {sdr: TBD, si_sdr: TBD, perceptual: TBD}   # TODO: do ustalenia, patrz sekcja 9 dokumentu architektury (#8, #11)
+  # malejąco wg SDR_mean z all_models.csv (proxy dla fitness, dopóki wagi są TBD — patrz #8/#11 wyżej).
+  # SAM Audio odfiltrowany z sekcji stems niezależnie od tego pliku (zakaz twardy w registry.py, FORBIDDEN_FOR_STEMS).
+  stems:
+    vocals: [bs_roformer, demucs, spleeter, open_unmix]     # SDR_mean: 9.55 / 6.7827 / 6.70 / 6.21
+    drums:  [bs_roformer, demucs, spleeter, open_unmix]     # SDR_mean: 10.10 / 10.0806 / 6.49 / 6.41
+    bass:   [demucs, bs_roformer, spleeter, open_unmix]     # SDR_mean: 9.4311 / 7.22 / 4.81 / 4.78 (Demucs #1 dla basu)
+    other:  [bs_roformer, demucs, spleeter, open_unmix]     # SDR_mean: 6.60 / 5.4724 / 4.52 / 3.83
+  open_tasks: [sam_audio]       # kategoria B
+  # #9 częściowo domknięte 24.09.2026: all_models.csv dostarczył wyniki SDR/SI-SDR/PQ/CE/CU dla Demucs
+  # i Open-Unmix, więc oba modele wchodzą teraz do rankingu. VRAM per model nadal nieznane (brak w CSV) —
+  # patrz `vram_gb: null` niżej, TODO: do ustalenia, patrz sekcja 9 dokumentu architektury (#9, część VRAM).
+  no_results_yet: []
+
+# "podkład" nie ma osobnego rankingu w danych benchmarku — tymczasowo używamy rankingu wokalu.
+# TODO: do ustalenia, patrz sekcja 9 dokumentu architektury (brak w tabeli pytań; dopisać po spotkaniu)
+stem_aliases:
+  instrumental: vocals
+
+models:
+  bs_roformer:
+    agent: agent_bs_roformer
+    vram_gb: null               # TODO: do ustalenia, patrz sekcja 9 dokumentu architektury (#9)
+    tasks: [stem:vocals, stem:drums, stem:bass, stem:other, stem:instrumental]
+  spleeter:
+    agent: agent_spleeter
+    vram_gb: null               # TODO (#9)
+    tasks: [stem:vocals, stem:drums, stem:bass, stem:other, stem:instrumental]
+  demucs:
+    agent: agent_demucs
+    vram_gb: null               # TODO (#9)
+    tasks: [stem:vocals, stem:drums, stem:bass, stem:other, stem:instrumental]
+  open_unmix:
+    agent: agent_open_unmix
+    vram_gb: null               # TODO (#9)
+    tasks: [stem:vocals, stem:drums, stem:bass, stem:other, stem:instrumental]
+  sam_audio:
+    agent: agent_sam_audio
+    vram_gb: null               # TODO (#9)
+    tasks: [open]               # NIE obsługuje stemów (ujemny SDR/SI-SDR, sekcja 5.4)

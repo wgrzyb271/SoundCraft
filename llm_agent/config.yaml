@@ -1,0 +1,29 @@
+# Wpisz klucze i uruchom. Zmienne środowiskowe mają pierwszeństwo przed tym plikiem.
+debug: false          # true => panel TUI + log DEBUG
+
+api_keys:
+  deepseek: ""        # DEEPSEEK_API_KEY
+  huggingface: ""     # HF_TOKEN
+
+env: {}               # dodatkowe zmienne środowiskowe, np. {WANDB_API_KEY: "..."}
+
+deepseek:
+  model: deepseek-v4-flash
+  thinking: false
+  timeout_s: 60
+
+orchestrator:
+  classifier: hybrid            # hybrid | llm | rules
+  max_failures: 3
+  max_attempts_per_agent: 1
+  agent_timeout_s: 3600
+  count_unsupported_task: true
+
+paths:
+  models_yaml: models.yaml
+  user_root: /tmp/orkiestrator_users
+
+mcp:
+  command: ""         # puste = lokalny stub deploy
+  args: []
+  env: {}

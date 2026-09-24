@@ -1,0 +1,6 @@
+# Ignoruj wszystko w katalogu głównym
+/*
+
+# Wyjątki: zachowaj katalog llm_agent oraz plik .gitignore
+!/llm_agent/
+!.gitignore
