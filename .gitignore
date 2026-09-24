@@ -1,3 +1,5 @@
+# gitignore settings for frontend
+
 # Logs
 logs
 *.log
@@ -22,3 +24,19 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+#gitignore settings for backend
+# Python
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+.env.*
+
+# Keep the template
+!.env_template
+
+# Python virtual environments
+.venv/
+venv/
