@@ -21,7 +21,8 @@ def get_result(request_id:str):
         )
     except Exception:
         return {
-            "status":"processing"
+            "status":"processing",
+            "request_id":request_id
         }
 
     response = json.loads(
@@ -57,3 +58,21 @@ def get_result_audio(request_id:str):
         media_type="audio/wav",
         filename="audio.wav"
     )
+
+@result_router.delete("/result/{request_id}")
+def delete_result(request_id: str):
+    try:
+        transfer_service.delete_request(
+            request_id
+        )
+
+        return {
+            "status": "deleted",
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not delete request: {e}",
+        )

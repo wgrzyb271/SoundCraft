@@ -9,55 +9,91 @@ class SftpTransfer():
         self.private_key=private_key
         self.port=port
 
-    def create_directory(self, remote_dir):
-            key = paramiko.Ed25519Key.from_private_key_file(
-                self.private_key
+        print("=== SFTP CONFIG ===")
+        print(f"host: {self.host}")
+        print(f"username: {self.username}")
+        print(f"remote_path: {self.remote_path}")
+        print(f"port: {self.port}")
+
+    def connect(self):
+        key = paramiko.Ed25519Key.from_private_key_file(self.private_key)
+       
+        transport = paramiko.Transport((self.host, self.port))
+        transport.connect(username=self.username,pkey=key)
+
+        sftp = paramiko.SFTPClient.from_transport(transport)
+
+        return transport,sftp 
+
+    def mkdir_if_not_exists(self,sftp,path:str):
+        try:
+            sftp.stat(path)
+        except FileNotFoundError:
+            sftp.mkdir(path)
+
+    def create_request(self,request_id:str):
+        transport, sftp = self.connect()
+        try:
+            request_dir = (
+                f"{self.remote_path}/request_{request_id}"
             )
+            input_dir = f"{request_dir}/input"
+            output_dir = f"{request_dir}/output"
 
-            transport = paramiko.Transport((self.host, self.port))
-            transport.connect(
-                username=self.username,
-                pkey=key
-            )
+            self.mkdir_if_not_exists(sftp, request_dir)
+            self.mkdir_if_not_exists(sftp, input_dir)
+            self.mkdir_if_not_exists(sftp, output_dir)
 
-            sftp = paramiko.SFTPClient.from_transport(transport)
+        finally:
+            sftp.close()
+            transport.close()
+    
 
-            remote_directory = f"{self.remote_path}/{remote_dir}"
+    def transfer(self, local_path:Path,request_id:str):
 
-            print("REMOTE PATH:", self.remote_path)
-            print("REMOTE DIR:", remote_dir)
-            print("FULL PATH:", remote_directory)
+        transport, sftp = self.connect()
+        try:
+            remote_file = (f"{self.remote_path}/"f"request_{request_id}/"f"input/"f"{local_path.name}")
+            sftp.put(str(local_path),remote_file)
 
-            try:
-                sftp.stat(remote_directory)
-            except FileNotFoundError:
-                sftp.mkdir(remote_directory)
-
+        finally:
             sftp.close()
             transport.close()
 
-    def transfer(self, local_path:Path,remote_dir):
-        key = paramiko.Ed25519Key.from_private_key_file(self.private_key)
-        transport = paramiko.Transport((self.host, self.port))
-        transport.connect(username=self.username,pkey=key)
+    def download(self, request_id:str, filename,local_path):
+        print("=== SFTP DOWNLOAD INPUT ===")
+        print(f"request_id: {request_id}")
+        print(f"filename: {filename}")
+        print(f"remote_path: {self.remote_path}")
+        transport,sftp = self.connect()
+        try:
+            remote_file = (f"{self.remote_path}/"f"request_{request_id}/"f"output/"f"{filename}")
+            print(f"SFTP DOWNLOAD: {remote_file}")
 
-        sftp = paramiko.SFTPClient.from_transport(transport)
-        remote_file = f"{self.remote_path}/{remote_dir}/{local_path.name}"
-        sftp.put(str(local_path),remote_file)
+            sftp.get(remote_file,str(local_path))
+        finally:
+            sftp.close()
+            transport.close()
 
-        sftp.close()
-        transport.close()
+    def delete_request(self, request_id: str):
+        transport, sftp = self.connect()
 
-    def download(self, remote_dir, filename,local_path):
-        key = paramiko.Ed25519Key.from_private_key_file(self.private_key)
+        try:
+            request_dir = (f"{self.remote_path}/request_{request_id}")
+            self.remove_directory_recursive(sftp,request_dir)
 
-        transport = paramiko.Transport((self.host, self.port))
-        transport.connect(username=self.username,pkey=key)
+        finally:
+            sftp.close()
+            transport.close()
 
-        sftp = paramiko.SFTPClient.from_transport(transport)
-        remote_file = f"{self.remote_path}/{remote_dir}/{filename}"
+    def remove_directory_recursive(self, sftp, path: str):
 
-        sftp.get(remote_file,str(local_path))
+        for item in sftp.listdir_attr(path):
+            item_path = f"{path}/{item.filename}"
 
-        sftp.close()
-        transport.close()
+            if item.st_mode & 0o40000:
+                self.remove_directory_recursive(sftp,item_path,)
+            else:
+                sftp.remove(item_path)
+
+        sftp.rmdir(path)
