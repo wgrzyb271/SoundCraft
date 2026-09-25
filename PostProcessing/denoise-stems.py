@@ -38,7 +38,7 @@ from typing import Optional
 def denoise_stem(
     input_path: str,
     output_path: str,
-    prop_decrease: float = 0.8,
+    prop_decrease: float = 0.7,
     stationary: bool = False,
     n_fft: int = 2048,
     chunk_seconds: int = 10,
@@ -65,7 +65,7 @@ def denoise_stem(
                     "details": f"Nie znaleziono pliku: {input_path}"}
 
         audio, sr = sf.read(input_path, always_2d=True, dtype="float32")
-        audio_t = audio.T  # (channels, samples) — wymóg noisereduce
+        audio_t = audio.T
 
         reduced = nr.reduce_noise(
             y=audio_t,
