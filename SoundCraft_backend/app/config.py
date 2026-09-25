@@ -9,9 +9,10 @@ class Settings(BaseSettings):
     sftp_remote_path:str
     sftp_private_key:str
     sftp_port:int=22
+    processing_ttl:int = 60 #in sec
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env",".config"),
         env_file_encoding="utf-8"
     )
 
