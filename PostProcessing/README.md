@@ -1,14 +1,14 @@
-# PostProcessing – narzędzia MCP dla systemu wieloagentowego
+# PostProcessing - narzędzia MCP dla systemu wieloagentowego
 
 Zadania 3.2 i 3.3 z dokumentu architektury (`orkiestrator-sam-audio-wcss.md`).
 
 ## Zawartość
-- `stitch_stems.py` – narzędzie MCP do remiksu wyseparowanych ścieżek (3.2)
-- `denoise_stem.py` – narzędzie MCP do odszumiania (3.3, spectral gating)
-- `docs/denoise_report.md` – raport z testów spectral gating
-- `tests/` – pliki audio i screeny z testów
+- `stitch_stems.py` - narzędzie MCP do remiksu wyseparowanych ścieżek (3.2)
+- `denoise_stem.py` - narzędzie MCP do odszumiania (3.3, spectral gating)
+- `docs/denoise_report.md` - raport z testów spectral gating
+- `tests/` - pliki audio i screeny z testów
 
-## 3.2 stitch_stems – remix ze stemów
+## 3.2 stitch_stems - remix ze stemów
 
 **Typ:** narzędzie MCP (deterministyczne, nie agent)
 
@@ -26,13 +26,13 @@ i zapisuje wynik. Orkiestrator tłumaczy komendy użytkownika (np. „usuń woka
 **Testy:** 5 utworów × 4 scenariusze (full, karaoke, vocal_boost, swapped).
 Wyniki: ✅ narzędzie działa poprawnie.
 
-## 3.3 denoise_stem – odszumianie (spectral gating)
+## 3.3 denoise_stem - odszumianie (spectral gating)
 
 **Typ:** narzędzie MCP (spectral gating przez `noisereduce`)
 
 **Funkcja:** odszumianie wyseparowanych ścieżek metodą bramki widmowej.
 
-**Wynik testów:** ⚠️ częściowa poprawa – spectral gating redukuje szum tła
+**Wynik testów:** ⚠️ częściowa poprawa - spectral gating redukuje szum tła
 i artefakty wokół sygnału, ale **nie usuwa artefaktów separacji** („puszkowości"
 wokalu, przenikania instrumentów).
 
