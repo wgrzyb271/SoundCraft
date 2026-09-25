@@ -2,7 +2,7 @@
 
 Backend API aplikacji **SoundCraft** odpowiedzialny za przyjmowanie plików audio, przesyłanie ich na serwer HPC oraz pobieranie wyników wygenerowanych przez agenta.
 
-Backend wykorzystuje **FastAPI**, **FFmpeg** oraz **SFTP**.
+Backend wykorzystuje **FastAPI**, **FFmpeg** oraz **SFTP** i **rsync** jako backup.
 
 ---
 
