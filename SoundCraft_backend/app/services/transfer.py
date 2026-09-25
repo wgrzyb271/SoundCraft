@@ -32,5 +32,10 @@ class TransferService:
                 raise RuntimeError("Both rsync and sftp failed") from sftp_error
     
     def download_result(self,request_id,filename,local_path):
-        remote_dir = f"output/request{request_id}"
-        self.sftp.download(remote_dir,filename,local_path)
+        self.sftp.download(request_id,filename,local_path)
+
+    def create_request(self,request_id: str):
+        self.sftp.create_request(request_id)
+
+    def delete_request(self, request_id:str):
+        self.sftp.delete_request(request_id)
