@@ -2,7 +2,7 @@
 
 Backend API aplikacji **SoundCraft** odpowiedzialny za przyjmowanie plików audio, przesyłanie ich na serwer HPC oraz pobieranie wyników wygenerowanych przez agenta.
 
-Backend wykorzystuje **FastAPI**, **FFmpeg**, **SFTP** oraz opcjonalnie **rsync**.
+Backend wykorzystuje **FastAPI**, **FFmpeg** oraz **SFTP**.
 
 ---
 
@@ -20,11 +20,11 @@ FastAPI
   ├── metadata.json
   │
   ▼
-HPC / input/request<UUID>/
+HPC / request_<UUID>/
   │
   │ Agent
   ▼
-HPC / output/request<UUID>/
+HPC / request_<UUID>/output/
   │
   │ SFTP
   ▼
@@ -43,30 +43,21 @@ Każdy request otrzymuje unikalny `request_id` w formacie UUID.
 Katalog bazowy:
 
 ```text
-/lustre/pd03/hpc-danbor2008-1756464546/wojgrz4918/soundcraft
+/home/wojgrz4918/backend_files
 ```
 
 Struktura:
 
 ```text
-soundcraft/
-├── input/
-│   └── request<UUID>/
-│       ├── audio.wav
-│       └── metadata.json
-│
-└── output/
-    └── request<UUID>/
+backend_files/
+└── request_<UUID>/
+    ├── input/
+    │   ├── audio.wav
+    │   └── metadata.json
+    │
+    └── output/
         ├── audio.wav
         └── response.json
-```
-
-Przykład:
-
-```text
-input/request25b356a4-a8e5-447a-a6a4-83c1febed4eb/
-├── audio.wav
-└── metadata.json
 ```
 
 ---
@@ -97,7 +88,8 @@ Backend:
 3. sprawdza format audio,
 4. w razie potrzeby konwertuje audio przez FFmpeg,
 5. tworzy `metadata.json`,
-6. przesyła dane na HPC.
+6. tworzy katalog requestu na HPC,
+7. przesyła dane na HPC przez SFTP.
 
 ---
 
@@ -106,9 +98,10 @@ Backend:
 Agent otrzymuje:
 
 ```text
-input/request<UUID>/
-├── audio.wav
-└── metadata.json
+request_<UUID>/
+├── input/
+│   ├── audio.wav
+│   └── metadata.json
 ```
 
 ### `audio.wav`
@@ -138,9 +131,10 @@ Stereo
 Po zakończeniu pracy agent powinien utworzyć:
 
 ```text
-output/request<UUID>/
-├── audio.wav
-└── response.json
+request_<UUID>/
+└── output/
+    ├── audio.wav
+    └── response.json
 ```
 
 ### `response.json`
@@ -190,7 +184,7 @@ Po zakończeniu:
 Pobiera wygenerowany plik:
 
 ```text
-output/request<UUID>/audio.wav
+output/audio.wav
 ```
 
 Zwracany jest jako:
@@ -203,35 +197,46 @@ Content-Type: audio/wav
 
 ## 7. Endpointy
 
-| Method | Endpoint                     | Opis                  |
-| ------ | ---------------------------- | --------------------- |
-| `POST` | `/upload`                    | Upload audio + prompt |
-| `GET`  | `/result/{request_id}`       | Status i wynik JSON   |
-| `GET`  | `/result/{request_id}/audio` | Pobranie audio        |
+| Method   | Endpoint                     | Opis                  |
+| -------- | ---------------------------- | --------------------- |
+| `POST`   | `/upload`                    | Upload audio + prompt |
+| `GET`    | `/result/{request_id}`       | Status i wynik JSON   |
+| `GET`    | `/result/{request_id}/audio` | Pobranie audio        |
+| `DELETE` | `/result/{request_id}`       | Usunięcie requestu    |
 
 ---
 
 ## 8. Transfer plików
 
-Upload na HPC próbuje użyć:
-
-```text
-rsync
-```
-
-Jeżeli `rsync` nie zadziała, backend używa:
+Transfer plików na HPC oraz pobieranie wyników odbywa się przez:
 
 ```text
 SFTP
 ```
 
-Pobieranie wyników odbywa się przez SFTP.
+Komunikacja:
+
+```text
+FastAPI
+   │
+   │ SFTP
+   ▼
+WCSS / HPC
+```
 
 ---
 
 ## 9. Konfiguracja
 
 Konfiguracja znajduje się w `.env`:
+
+```env
+SFTP_HOST=ui.wcss.pl
+SFTP_USERNAME=wojgrz4918
+SFTP_REMOTE_PATH=/home/wojgrz4918/backend_files
+SFTP_PRIVATE_KEY=C:/Users/emili/.ssh/id_ed25519
+SFTP_PORT=22
+```
 
 ---
 
@@ -269,11 +274,11 @@ request_id = UUID
 audio + metadata.json
       │
       ▼
-HPC/input/request<UUID>/
+HPC/request_<UUID>/input/
       │
       │ Agent
       ▼
-HPC/output/request<UUID>/
+HPC/request_<UUID>/output/
       │
       ├── response.json
       └── audio.wav
@@ -288,11 +293,12 @@ GET /result/<UUID>/audio
 Najważniejszym kontraktem pomiędzy backendem a agentem jest struktura:
 
 ```text
-input/request<UUID>/
-├── audio.wav
-└── metadata.json
-
-output/request<UUID>/
-├── audio.wav
-└── response.json
+request_<UUID>/
+├── input/
+│   ├── audio.wav
+│   └── metadata.json
+│
+└── output/
+    ├── audio.wav
+    └── response.json
 ```
