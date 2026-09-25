@@ -36,6 +36,8 @@ Wyniki: ✅ narzędzie działa poprawnie.
 i artefakty wokół sygnału, ale **nie usuwa artefaktów separacji** („puszkowości"
 wokalu, przenikania instrumentów).
 
+**Zalecane parametry:** `prop_decrease=0.7` (najlepszy kompromis).
+
 **Szczegóły:** patrz `docs/denoise_report.md`.
 
 ## Środowisko testów
