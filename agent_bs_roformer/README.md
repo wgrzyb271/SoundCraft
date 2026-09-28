@@ -25,7 +25,7 @@ The agent requires paths to the BS-Roformer configuration, checkpoint, and repos
 Build the agent using `build_agent()`:
 
 ```python
-from agent.factory import build_agent
+from agent.main  import build_agent
 
 CONFIG_PATH = Path("/home/wojgrz4918/bs_roformer/model_files/config_bs_roformer_384_8_2_485100.yaml")
 CHECKPOINT_PATH = Path("/home/wojgrz4918/bs_roformer/model_files/model_bs_roformer_ep_17_sdr_9.6568.ckpt")
