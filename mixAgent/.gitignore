@@ -1,0 +1,6 @@
+.env
+venv/
+test_jobs/
+test*.py
+__pycache__/
+*.pyc

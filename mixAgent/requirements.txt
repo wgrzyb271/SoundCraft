@@ -1,0 +1,4 @@
+pedalboard
+soundfile
+python-dotenv
+openai
