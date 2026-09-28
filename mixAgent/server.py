@@ -1,16 +1,27 @@
 import os
 import soundfile as sf
+from collections.abc import Callable
 
-from config import STORAGE_ROOT, SAFETY_LIMITER_THRESHOLD_DB, SAFETY_LIMITER_RELEASE_MS
-from effects import build_pedalboard, make_limiter
-from agent import decide_effects
+from .config import STORAGE_ROOT, SAFETY_LIMITER_THRESHOLD_DB, SAFETY_LIMITER_RELEASE_MS
+from .effects import build_pedalboard, make_limiter
+from .agent import decide_effects
 
 
-def process_stem(input_path: str, user_prompt: str, mixed_output_path: str, stem_name: str) -> dict:
+def process_stem(
+    input_path: str,
+    user_prompt: str,
+    mixed_output_path: str,
+    stem_name: str,
+    *,
+    chosen_effects: dict | None = None,
+    effects_decider: Callable[[str, str], dict] | None = None,
+) -> dict:
     audio, sr = sf.read(input_path, always_2d=True)
     audio = audio.T  # pedalboard oczekuje (channels, samples)
 
-    chosen = decide_effects(user_prompt, stem_name)
+    chosen = chosen_effects
+    if chosen is None:
+        chosen = (effects_decider or decide_effects)(user_prompt, stem_name)
     board = build_pedalboard(chosen)
     processed = board(audio, sr)
 

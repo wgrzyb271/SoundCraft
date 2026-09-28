@@ -15,11 +15,13 @@ ERROR_TITLES = {
     "UNFEASIBLE": "Zadanie niewykonalne żadnym z dostępnych modeli",
     "NO_CANDIDATES": "Brak kolejnych kandydatów do wykonania zadania",
     "MAX_FAILURES": "Osiągnięto limit nieudanych prób",
+    "POST_PROCESSING_ERROR": "Post-processing nie powiódł się",
     "INTERNAL_ERROR": "Wewnętrzny błąd Orkiestratora",
 }
 
 
 class FinalSummary(BaseModel):
+    execution_code: Literal["PASSED", "FAILED"]
     status: Literal["SUCCESS", "FAILED"]
     category: str | None = None
     stems: list[str] = Field(default_factory=list)
@@ -53,12 +55,14 @@ def build_summary(state: dict[str, Any]) -> FinalSummary:
     cls = state.get("classification") or {}
     ok = state.get("outcome") == "SUCCESS"
     report = state.get("report") or {}
+    post = state.get("postprocessing_report") or {}
     last = attempts[-1] if attempts else None
     code = state.get("error_code")
     msg = state.get("error_message")
     if not ok and code:
         msg = f"{ERROR_TITLES.get(code, code)}" + (f": {msg}" if msg else "")
     return FinalSummary(
+        execution_code="PASSED" if ok else "FAILED",
         status="SUCCESS" if ok else "FAILED",
         category=cls.get("category"),
         stems=cls.get("stems", []),
@@ -66,7 +70,7 @@ def build_summary(state: dict[str, Any]) -> FinalSummary:
         agent=last.agent if (ok and last) else None,
         rationale=_rationale(state, attempts),
         job_id=report.get("job_id") if ok else None,
-        output_path=report.get("output_path") if ok else None,
+        output_path=post.get("output_path") if ok else None,
         user_dir=state.get("user_dir"),
         attempts=attempts,
         error_code=None if ok else code,

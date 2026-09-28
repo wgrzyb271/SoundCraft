@@ -1,6 +1,6 @@
 import "./styles/audioView.css";
-import { AudioUploader } from "./UploadAudioView";
-import { AudioPreview } from "./PreviewAudioView";
+import { AudioUploader } from "./uploadAudioView";
+import { AudioPreview } from "./previewAudioView";
 
 type AudioViewProps = { 
     audioFile: File | null;

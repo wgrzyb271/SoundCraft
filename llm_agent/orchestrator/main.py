@@ -13,6 +13,7 @@ from .llm import ChatClient, DeepSeekClient, LLMError
 from .mcp_session import McpSession, NullMcpSession, StdioMcpSession
 from .registry import list_available_models
 from .summary import FinalSummary, build_summary
+from .postprocessing import SoundCraftPostProcessor
 
 if TYPE_CHECKING:  # rich jest potrzebny tylko w trybie debug (TUI) — import leniwy
     from rich.console import Console
@@ -38,6 +39,7 @@ async def run_orchestrator(
     mcp_factory: Callable[[], McpSession] | None = None,
     console: "Console | None" = None,
     show: bool | None = None,
+    postprocess: Callable[[Any, Any], Any] | None = None,
 ) -> FinalSummary:
     """Uruchamia graf end-to-end. Połączenia MCP są zamykane przez `async with` (bez procesów zombie).
 
@@ -56,7 +58,13 @@ async def run_orchestrator(
     factory = mcp_factory or _default_mcp_factory(settings)
 
     async with factory() as mcp:
-        deps = Deps(settings=settings, agents=agents, deploy=mcp.deploy_user_pipeline, llm=llm)
+        deps = Deps(
+            settings=settings,
+            agents=agents,
+            deploy=mcp.deploy_user_pipeline,
+            llm=llm,
+            postprocess=postprocess or SoundCraftPostProcessor(),
+        )
         graph = build_graph(deps)
         try:
             state = await graph.ainvoke(

@@ -32,7 +32,10 @@ export function ChatSection({onPromptSubmit, agentResponse}:ChatSectionProps){
 
     useEffect(()=>{
         if(!agentResponse) return;
-        const message = typeof agentResponse.message==="string"? agentResponse.message
+        const message = typeof agentResponse.error_message === "string"
+        ? agentResponse.error_message
+        : agentResponse.execution_code === "PASSED"
+        ? "Audio processed successfully."
         : JSON.stringify(agentResponse);
 
         setMessages(prev => [

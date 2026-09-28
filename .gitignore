@@ -1,7 +1,16 @@
-# gitignore settings for frontend
+# System and editors
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -9,34 +18,37 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-#gitignore settings for backend
-# Python
+# Python caches and environments
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+.venv-*/
+venv/
+venv-*/
 
-# Environment variables
+# Frontend dependencies and builds
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Secrets and local configuration
 .env
 .env.*
-
-# Keep the template
 !.env_template
+llm_agent/config.local.yaml
 
-# Python virtual environments
-.venv/
-venv/
+# Runtime data and generated audio
+/soundcraft_demo_result.wav
+/agent_output*/
+/PostProcessing/tests/sample_outputs/
+/demucs/agent_output*/
+*.slurm.out
+*.slurm.err
+slurm-*.out
+slurm-*.err

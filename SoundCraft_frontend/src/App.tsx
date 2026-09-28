@@ -30,8 +30,10 @@ function App() {
           const completedResult = await waitForResult(requestId);
 
           setAgentResponse(completedResult.response);
-          const resultFile = await downloadResultAudio(requestId);
-          setResultAudioFile(resultFile);
+          if (completedResult.response.execution_code === "PASSED") {
+            const resultFile = await downloadResultAudio(requestId);
+            setResultAudioFile(resultFile);
+          }
 
         } 
         catch (error) {
@@ -45,7 +47,7 @@ function App() {
   return (
     <>
     <ToolBar></ToolBar>
-      <section id="center">
+      <section id="center" aria-busy={isProcessing}>
         <ChatSection onPromptSubmit={handlePromptSubmit} agentResponse={agentResponse}></ChatSection>
         <AudioView setAudioFile={setAudioFile} audioFile={audioFile} resultAudioFile={resultAudioFile}></AudioView>
       </section>

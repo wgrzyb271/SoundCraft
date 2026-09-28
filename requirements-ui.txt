@@ -1,0 +1,6 @@
+-r llm_agent/requirements.txt
+fastapi>=0.115
+paramiko>=3.5
+pydantic-settings>=2.7
+python-multipart>=0.0.9
+uvicorn>=0.31

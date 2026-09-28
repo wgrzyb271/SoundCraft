@@ -7,11 +7,11 @@ ranking:
   # malejąco wg SDR_mean z all_models.csv (proxy dla fitness, dopóki wagi są TBD — patrz #8/#11 wyżej).
   # SAM Audio odfiltrowany z sekcji stems niezależnie od tego pliku (zakaz twardy w registry.py, FORBIDDEN_FOR_STEMS).
   stems:
-    vocals: [bs_roformer, demucs, spleeter, open_unmix]     # SDR_mean: 9.55 / 6.7827 / 6.70 / 6.21
-    drums:  [bs_roformer, demucs, spleeter, open_unmix]     # SDR_mean: 10.10 / 10.0806 / 6.49 / 6.41
-    bass:   [demucs, bs_roformer, spleeter, open_unmix]     # SDR_mean: 9.4311 / 7.22 / 4.81 / 4.78 (Demucs #1 dla basu)
-    other:  [bs_roformer, demucs, spleeter, open_unmix]     # SDR_mean: 6.60 / 5.4724 / 4.52 / 3.83
-  open_tasks: [sam_audio]       # kategoria B
+    vocals: [bs_roformer, demucs]     # aktywni wykonawcy: SDR_mean 9.55 / 6.7827
+    drums:  [bs_roformer, demucs]     # aktywni wykonawcy: SDR_mean 10.10 / 10.0806
+    bass:   [demucs, bs_roformer]     # Demucs #1 dla basu: SDR_mean 9.4311 / 7.22
+    other:  [bs_roformer, demucs]     # aktywni wykonawcy: SDR_mean 6.60 / 5.4724
+  open_tasks: [sam_audio_base]
   # #9 częściowo domknięte 24.09.2026: all_models.csv dostarczył wyniki SDR/SI-SDR/PQ/CE/CU dla Demucs
   # i Open-Unmix, więc oba modele wchodzą teraz do rankingu. VRAM per model nadal nieznane (brak w CSV) —
   # patrz `vram_gb: null` niżej, TODO: do ustalenia, patrz sekcja 9 dokumentu architektury (#9, część VRAM).
@@ -27,19 +27,11 @@ models:
     agent: agent_bs_roformer
     vram_gb: null               # TODO: do ustalenia, patrz sekcja 9 dokumentu architektury (#9)
     tasks: [stem:vocals, stem:drums, stem:bass, stem:other, stem:instrumental]
-  spleeter:
-    agent: agent_spleeter
-    vram_gb: null               # TODO (#9)
-    tasks: [stem:vocals, stem:drums, stem:bass, stem:other, stem:instrumental]
   demucs:
     agent: agent_demucs
     vram_gb: null               # TODO (#9)
     tasks: [stem:vocals, stem:drums, stem:bass, stem:other, stem:instrumental]
-  open_unmix:
-    agent: agent_open_unmix
-    vram_gb: null               # TODO (#9)
-    tasks: [stem:vocals, stem:drums, stem:bass, stem:other, stem:instrumental]
-  sam_audio:
+  sam_audio_base:
     agent: agent_sam_audio
-    vram_gb: null               # TODO (#9)
-    tasks: [open]               # NIE obsługuje stemów (ujemny SDR/SI-SDR, sekcja 5.4)
+    vram_gb: null
+    tasks: [open]

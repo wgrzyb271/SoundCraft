@@ -54,6 +54,7 @@ class Settings:
     # --- czas ---
     # Bezpiecznik po stronie Orkiestratora. Właściwe T_wait (oczekiwanie na VRAM) żyje w agencie.
     agent_timeout_s: float = 3600.0  # TODO: do ustalenia, patrz sekcja 9 dokumentu architektury (#3: T_wait, budżet czasu)
+    postprocessing_timeout_s: float = 900.0
 
     # --- klasyfikacja promptu ---
     classifier_mode: ClassifierMode = "hybrid"  # TODO: do ustalenia, patrz sekcja 9 dokumentu architektury (#5: kto klasyfikuje; co przy niepewności)
@@ -85,6 +86,7 @@ class Settings:
     # --- ścieżki ---
     models_yaml_path: Path = Path(__file__).resolve().parent.parent / "models.yaml"
     user_root: str = "/tmp/orkiestrator_users"  # tylko dla lokalnego stuba deploy; realny deploy = MCP deploy_user_pipeline
+    request_root: str | None = None  # katalog współdzielony backend <-> worker WCSS
 
     # --- graf ---
     max_graph_steps: int = 80  # recursion_limit LangGraph (bezpiecznik przed zapętleniem)
@@ -101,6 +103,8 @@ class Settings:
             errs.append("max_attempts_per_agent musi być >= 1")
         if self.agent_timeout_s <= 0:
             errs.append("agent_timeout_s musi być > 0")
+        if self.postprocessing_timeout_s <= 0:
+            errs.append("postprocessing_timeout_s musi być > 0")
         if self.classifier_mode not in _CLASSIFIER_MODES:
             errs.append(f"classifier_mode musi być jednym z: {', '.join(_CLASSIFIER_MODES)} (jest: {self.classifier_mode!r})")
         if not self.deepseek_base_url.rstrip("/").startswith(DEEPSEEK_BASE_URL):
@@ -135,7 +139,9 @@ class Settings:
 
 
 # ---------------------------------------------------------------------- plik konfiguracyjny
-_TOP_LEVEL_KEYS = {"debug", "api_keys", "env", "deepseek", "orchestrator", "paths", "mcp"}
+_TOP_LEVEL_KEYS = {
+    "debug", "api_keys", "env", "deepseek", "orchestrator", "paths", "mcp", "wcss", "agents", "backend"
+}
 
 
 def _section(data: dict[str, Any], name: str, allowed: set[str]) -> dict[str, Any]:
@@ -154,6 +160,14 @@ def _str_map(value: Any, where: str) -> dict[str, str]:
     if not isinstance(value, dict):
         raise ConfigError(f"'{where}' musi być słownikiem NAZWA: wartość")
     return {str(k): str(v) for k, v in value.items() if v is not None}
+
+
+def _path_or_command(config_path: Path, value: Any) -> str:
+    text = str(value).strip()
+    if not text or "/" not in text:
+        return text
+    candidate = Path(text).expanduser()
+    return str(candidate if candidate.is_absolute() else (config_path.parent / candidate).resolve())
 
 
 def _kwargs_from_file(path: Path) -> dict[str, Any]:
@@ -189,7 +203,8 @@ def _kwargs_from_file(path: Path) -> dict[str, Any]:
         kw["llm_timeout_s"] = float(ds["timeout_s"])
 
     orch = _section(data, "orchestrator",
-                    {"classifier", "max_failures", "max_attempts_per_agent", "agent_timeout_s", "count_unsupported_task"})
+                    {"classifier", "max_failures", "max_attempts_per_agent", "agent_timeout_s",
+                     "postprocessing_timeout_s", "count_unsupported_task"})
     if "classifier" in orch:
         kw["classifier_mode"] = orch["classifier"]
     if "max_failures" in orch:
@@ -198,15 +213,19 @@ def _kwargs_from_file(path: Path) -> dict[str, Any]:
         kw["max_attempts_per_agent"] = int(orch["max_attempts_per_agent"])
     if "agent_timeout_s" in orch:
         kw["agent_timeout_s"] = float(orch["agent_timeout_s"])
+    if "postprocessing_timeout_s" in orch:
+        kw["postprocessing_timeout_s"] = float(orch["postprocessing_timeout_s"])
     if "count_unsupported_task" in orch:
         kw["count_unsupported_task"] = bool(orch["count_unsupported_task"])
 
-    paths = _section(data, "paths", {"models_yaml", "user_root"})
+    paths = _section(data, "paths", {"models_yaml", "user_root", "request_root"})
     if paths.get("models_yaml"):
         p = Path(str(paths["models_yaml"])).expanduser()
         kw["models_yaml_path"] = p if p.is_absolute() else (path.parent / p).resolve()
     if paths.get("user_root"):
         kw["user_root"] = str(paths["user_root"])
+    if paths.get("request_root"):
+        kw["request_root"] = _path_or_command(path, paths["request_root"])
 
     mcp = _section(data, "mcp", {"command", "args", "env"})
     if mcp.get("command"):
@@ -218,10 +237,50 @@ def _kwargs_from_file(path: Path) -> dict[str, Any]:
     if mcp.get("env"):
         kw["mcp_env"] = _str_map(mcp["env"], "mcp.env")
 
+    configured_env = _str_map(data.get("env"), "env")
+
+    wcss = _section(data, "wcss", {"slurm_account", "slurm_qos", "slurm_partition", "python_module"})
+    for key, env_name in {
+        "slurm_account": "WCSS_SLURM_ACCOUNT",
+        "slurm_qos": "WCSS_SLURM_QOS",
+        "slurm_partition": "WCSS_SLURM_PARTITION",
+        "python_module": "WCSS_PYTHON_MODULE",
+    }.items():
+        if wcss.get(key):
+            configured_env[env_name] = str(wcss[key])
+
+    agents = _section(data, "agents", {"bs_roformer", "demucs", "sam_audio"})
+    agent_specs = {
+        "bs_roformer": {
+            "root": "BS_ROFORMER_AGENT_ROOT", "python": "BS_ROFORMER_PYTHON",
+            "config": "BS_ROFORMER_CONFIG", "checkpoint": "BS_ROFORMER_CHECKPOINT",
+            "model_repo": "BS_ROFORMER_REPO",
+        },
+        "demucs": {
+            "python": "DEMUCS_PYTHON", "script": "DEMUCS_AGENT_SCRIPT",
+            "orchestrator_root": "ORCHESTRATOR_ROOT",
+        },
+        "sam_audio": {
+            "python": "SAM_AUDIO_PYTHON", "root": "SAM_AUDIO_AGENT_ROOT", "model": "SAM_AUDIO_MODEL",
+        },
+    }
+    for agent_name, mapping in agent_specs.items():
+        section = _section(agents, agent_name, set(mapping))
+        for key, env_name in mapping.items():
+            if section.get(key):
+                value = section[key]
+                configured_env[env_name] = str(value) if key in {"model"} else _path_or_command(path, value)
+
+    # Używana przez SoundCraft_backend; dane SSH nie są eksportowane do jobów GPU.
+    _section(data, "backend", {
+        "rsync_host", "rsync_remote_path", "sftp_host", "sftp_username",
+        "sftp_remote_path", "sftp_private_key", "sftp_port", "processing_ttl",
+    })
+
     if "debug" in data:
         kw["debug"] = bool(data["debug"])
-    if data.get("env"):
-        kw["extra_env"] = _str_map(data["env"], "env")
+    if configured_env:
+        kw["extra_env"] = configured_env
     return kw
 
 
@@ -234,10 +293,14 @@ def _kwargs_from_env(env: Any) -> dict[str, Any]:
         kw["max_attempts_per_agent"] = int(env["ORCH_MAX_ATTEMPTS_PER_AGENT"])
     if "ORCH_AGENT_TIMEOUT_S" in env:
         kw["agent_timeout_s"] = float(env["ORCH_AGENT_TIMEOUT_S"])
+    if "ORCH_POSTPROCESSING_TIMEOUT_S" in env:
+        kw["postprocessing_timeout_s"] = float(env["ORCH_POSTPROCESSING_TIMEOUT_S"])
     if "ORCH_CLASSIFIER" in env:
         kw["classifier_mode"] = env["ORCH_CLASSIFIER"]
     if "ORCH_MODELS_YAML" in env:
         kw["models_yaml_path"] = Path(env["ORCH_MODELS_YAML"])
+    if "SOUNDCRAFT_REQUEST_ROOT" in env:
+        kw["request_root"] = env["SOUNDCRAFT_REQUEST_ROOT"]
     if "ORCH_DEBUG" in env:
         kw["debug"] = env["ORCH_DEBUG"].strip().lower() in ("1", "true", "yes", "on")
     if "DEEPSEEK_MODEL" in env:

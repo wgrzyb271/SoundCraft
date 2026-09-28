@@ -1,6 +1,6 @@
-import type { UploadResponse } from "./types";
+import type { ResultResponse, UploadResponse } from "./types";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 export async function uploadAudio(audioFile:File, prompt:string):Promise<UploadResponse>{
     const formData = new FormData();
@@ -17,9 +17,9 @@ export async function uploadAudio(audioFile:File, prompt:string):Promise<UploadR
     return response.json();
 }
 
-export async function getResult(requestId: string) {
+export async function getResult(requestId: string): Promise<ResultResponse> {
     const response = await fetch(
-        `${API_URL}/result/${requestId}`
+        `${API_URL}/result/${requestId}/agent_response`
     );
 
     if (!response.ok) {

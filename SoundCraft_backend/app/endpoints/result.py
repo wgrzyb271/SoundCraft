@@ -4,6 +4,9 @@ from pathlib import Path
 import json 
 from fastapi.responses import FileResponse
 from datetime import datetime,timezone
+from uuid import UUID
+import shutil
+from ..config import is_demo_mode
 
 result_router = APIRouter()
 
@@ -23,6 +26,12 @@ def is_expired(request_id:str)->bool:
     return datetime.now(timezone.utc) >= expires_at
 
 def get_latest_result(request_id:str, result_type:ResultType):
+    if is_demo_mode():
+        request_dir = get_request_dir(request_id)
+        folder = "audio_folder" if result_type == ResultType.AUDIO else "agent_response"
+        pattern = "changed_audio_*.wav" if result_type == ResultType.AUDIO else "response_*.json"
+        files = list((request_dir / "output" / folder).glob(pattern))
+        return max(files, key=lambda path: path.stat().st_mtime).name if files else None
     files = transfer_service.list_result_files(request_id,result_type)
     if not files:
         return None
@@ -45,8 +54,11 @@ def get_result(request_id:str):
                 "request_id": request_id
             }
         request_dir = get_request_dir(request_id)
-        response_path = (request_dir / "latest_response.json")
-        transfer_service.download_result(request_id, latest_filename, response_path, ResultType.AGENT_RESPONSE )
+        if is_demo_mode():
+            response_path = request_dir / "output" / "agent_response" / latest_filename
+        else:
+            response_path = request_dir / "latest_response.json"
+            transfer_service.download_result(request_id, latest_filename, response_path, ResultType.AGENT_RESPONSE )
 
     except Exception as e:
         print (f"Could not get agent response: {e}") 
@@ -79,17 +91,18 @@ def get_result_audio(request_id:str):
             raise HTTPException(status_code=404, detail="Audio is not ready")
 
         request_dir = get_request_dir(request_id)
-        audio_path = request_dir/latest_filename
+        audio_path = (request_dir / "output" / "audio_folder" / latest_filename) if is_demo_mode() else (request_dir/latest_filename)
         
         print(f"LATEST AUDIO: {latest_filename}")
         print(f"LOCAL AUDIO PATH: {audio_path}")
 
-        transfer_service.download_result(
-            request_id,
-            latest_filename,
-            audio_path,
-            ResultType.AUDIO
-        )
+        if not is_demo_mode():
+            transfer_service.download_result(
+                request_id,
+                latest_filename,
+                audio_path,
+                ResultType.AUDIO
+            )
     except HTTPException:
         raise
 
@@ -106,7 +119,11 @@ def get_result_audio(request_id:str):
 @result_router.delete("/result/{request_id}")
 def delete_result(request_id: str):
     try:
-        transfer_service.delete_request(request_id)
+        UUID(request_id)
+        if is_demo_mode():
+            shutil.rmtree(get_request_dir(request_id), ignore_errors=True)
+        else:
+            transfer_service.delete_request(request_id)
 
         return {
             "status": "deleted",

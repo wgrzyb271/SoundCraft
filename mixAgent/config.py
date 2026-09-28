@@ -1,11 +1,15 @@
 import os
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ImportError:  # .env jest wygodą; zmienne systemowe wystarczają do działania
+    def load_dotenv() -> bool:
+        return False
 
 load_dotenv()
 
-DEEPSEEK_API_KEY = os.environ["DEEPSEEK_API_KEY"]
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-STORAGE_ROOT = os.environ["STORAGE_ROOT"]
+STORAGE_ROOT = os.environ.get("STORAGE_ROOT", "/tmp/soundcraft_mix")
 
 MODEL_NAME = "deepseek-v4-flash"
 

@@ -52,3 +52,21 @@ class AgentReport(BaseModel):
         if self.status == "FAILED" and self.failure_type is None:
             raise ValueError("FAILED wymaga failure_type")
         return self
+
+
+class PostProcessingReport(BaseModel):
+    """Raport obowiązkowego etapu model -> mixAgent -> PostProcessing."""
+
+    status: Literal["SUCCESS", "FAILED"]
+    output_path: str | None = None
+    failure_type: Literal["RUNTIME_ERROR", "TIMEOUT"] | None = None
+    details: str = ""
+    artifacts: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _consistency(self) -> "PostProcessingReport":
+        if self.status == "SUCCESS" and not self.output_path:
+            raise ValueError("SUCCESS post-processingu wymaga output_path")
+        if self.status == "FAILED" and self.failure_type is None:
+            raise ValueError("FAILED post-processingu wymaga failure_type")
+        return self

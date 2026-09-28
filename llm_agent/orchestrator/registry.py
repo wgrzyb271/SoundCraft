@@ -11,7 +11,7 @@ import yaml
 
 STEMS = ("vocals", "drums", "bass", "other", "instrumental")
 # Twardy zakaz (sekcja 4/7.1): SAM Audio nigdy w kategorii A, niezależnie od danych w yaml.
-FORBIDDEN_FOR_STEMS = frozenset({"sam_audio"})
+FORBIDDEN_FOR_STEMS = frozenset({"sam_audio", "sam_audio_base"})
 
 
 class RegistryError(RuntimeError):

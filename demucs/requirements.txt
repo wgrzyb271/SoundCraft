@@ -1,0 +1,4 @@
+demucs>=4.0
+soundfile>=0.12
+torch>=2.2
+torchaudio>=2.2

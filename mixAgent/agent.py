@@ -1,8 +1,6 @@
 import json
 from openai import OpenAI
-from config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, MODEL_NAME
-
-client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
+from .config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, MODEL_NAME
 
 TOOLS = [
     {"type": "function", "function": {
@@ -52,8 +50,13 @@ w wokalu, a przetwarzasz bas), NIE stosuj żadnych efektów - zwróć pustą odp
 bez wywoływania narzędzi, chyba że stem wymaga tego z innego wyraźnego powodu.
 Nie stosuj efektów "na wszelki wypadek" ani żeby być spójnym z innymi stemami."""
 
-def decide_effects(user_prompt: str, stem_name: str) -> dict:
+def decide_effects(user_prompt: str, stem_name: str, client: OpenAI | None = None) -> dict:
     """Zwraca np. {'gain': {'gain_db': 3}, 'compressor': {...}}"""
+
+    if client is None:
+        if not DEEPSEEK_API_KEY:
+            raise RuntimeError("mixAgent wymaga DEEPSEEK_API_KEY dla promptu zawierającego efekty")
+        client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
 
     full_prompt = f"Aktualnie przetwarzana ścieżka: {stem_name}.\n\nProśba użytkownika: {user_prompt}"
 

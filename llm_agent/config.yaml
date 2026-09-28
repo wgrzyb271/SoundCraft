@@ -17,11 +17,48 @@ orchestrator:
   max_failures: 3
   max_attempts_per_agent: 1
   agent_timeout_s: 3600
+  postprocessing_timeout_s: 900
   count_unsupported_task: true
 
 paths:
   models_yaml: models.yaml
   user_root: /tmp/orkiestrator_users
+  # Ten sam katalog co SFTP_REMOTE_PATH/RSYNC_REMOTE_PATH backendu na WCSS.
+  request_root: /home/USER/backend_files
+
+wcss:
+  slurm_account: WCSS_ACCOUNT
+  slurm_qos: WCSS_ACCOUNT
+  slurm_partition: lem-gpu-short
+  # Puste = moduł właściwy dla danego agenta (BS: Python 3.10, Demucs/SAM: Python 3.11).
+  python_module: ""
+
+agents:
+  bs_roformer:
+    root: /home/USER/SoundCraft/agent_bs_roformer
+    python: python
+    config: /home/USER/models/bs_roformer/config.yaml
+    checkpoint: /home/USER/models/bs_roformer/model.ckpt
+    model_repo: /home/USER/Music-Source-Separation-Training
+  demucs:
+    python: /home/USER/venvs/demucs/bin/python
+    script: /home/USER/SoundCraft/demucs/agent.py
+    orchestrator_root: /home/USER/SoundCraft/llm_agent
+  sam_audio:
+    python: /home/USER/venvs/sam-audio/bin/python
+    root: /home/USER/SoundCraft/agent_sam_audio
+    model: facebook/sam-audio-base
+
+# Czytane przez SoundCraft_backend po ustawieniu SOUNDCRAFT_CONFIG na ten plik.
+backend:
+  rsync_host: USER@ui.wcss.pl
+  rsync_remote_path: /home/USER/backend_files
+  sftp_host: ui.wcss.pl
+  sftp_username: USER
+  sftp_remote_path: /home/USER/backend_files
+  sftp_private_key: /home/local-user/.ssh/id_ed25519
+  sftp_port: 22
+  processing_ttl: 3600
 
 mcp:
   command: ""         # puste = lokalny stub deploy

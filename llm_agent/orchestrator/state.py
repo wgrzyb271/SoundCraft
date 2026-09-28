@@ -19,6 +19,7 @@ class OrchestratorState(TypedDict, total=False):
     current_agent: str | None
     task: dict[str, Any]            # AgentTask.model_dump()
     report: dict[str, Any]          # AgentReport.model_dump()
+    postprocessing_report: dict[str, Any]  # PostProcessingReport.model_dump()
     history: list[dict[str, Any]]   # AttemptRecord.model_dump() — wszystkie dotychczasowe próby
     failures: int                   # licznik porażek (porównywany z N)
     # wynik

@@ -2,7 +2,7 @@
 rozszerzony o Inicjalizacja i DeployPipeline (sekcja 7.1, kroki 1–2):
 
   Inicjalizacja -> DeployPipeline -> Klasyfikacja -> WyborAgenta -> Zlecenie -> OczekiwanieNaRaport
-      -> Sukces | ObslugaBledu -> (WyborAgenta | Niepowodzenie)
+      -> PostProcessing -> Sukces | ObslugaBledu -> (WyborAgenta | Niepowodzenie)
 
 LLM (DeepSeek) występuje tylko w węźle Klasyfikacja. Wybór agenta jest deterministyczny (ranking z
 models.yaml), a kod grafu wymusza limity (sekcja 2.4: „LLM proponuje, kod pilnuje”).
@@ -21,7 +21,7 @@ from langgraph.graph import END, START, StateGraph
 from .agents import AgentRunner
 from .classify import Classification, ClassificationError, classify_prompt
 from .config import Settings
-from .contracts import AgentReport, AgentTask, AttemptRecord
+from .contracts import AgentReport, AgentTask, AttemptRecord, PostProcessingReport
 from .deploy import DeployError
 from .llm import ChatClient
 from .registry import RegistryError, candidates_for, list_available_models
@@ -39,6 +39,7 @@ class Deps:
     deploy: Callable[[str, str, str], Awaitable[str]]       # deploy_user_pipeline (MCP lub stub)
     llm: ChatClient | None = None                           # DeepSeek (jedyny LLM)
     list_models: Callable[[], dict[str, Any]] | None = None  # domyślnie: czyta models.yaml
+    postprocess: Callable[[AgentTask, AgentReport], Awaitable[PostProcessingReport | dict[str, Any]]] | None = None
 
 
 def pick_next_model(ordered: list[str], models: dict[str, Any], agents: Mapping[str, Any],
@@ -165,6 +166,30 @@ def build_graph(deps: Deps):
         upd = {"history": _record(state), "outcome": "SUCCESS", "error_code": None, "trace": ["Sukces"]}
         return {**upd, "final": build_summary({**state, **upd}).model_dump()}
 
+    async def PostProcessing(state: OrchestratorState) -> dict[str, Any]:
+        node = "PostProcessing"
+        if deps.postprocess is None:
+            return _fail(node, "POST_PROCESSING_ERROR", "brak skonfigurowanego etapu post-processingu")
+        try:
+            raw = await asyncio.wait_for(
+                deps.postprocess(AgentTask(**state["task"]), AgentReport(**state["report"])),
+                timeout=s.postprocessing_timeout_s,
+            )
+            report = raw if isinstance(raw, PostProcessingReport) else PostProcessingReport.model_validate(raw)
+        except asyncio.TimeoutError:
+            report = PostProcessingReport(
+                status="FAILED", failure_type="TIMEOUT",
+                details=f"post-processing nie zakończył się w {s.postprocessing_timeout_s:.0f}s",
+            )
+        except Exception as e:  # noqa: BLE001
+            report = PostProcessingReport(
+                status="FAILED", failure_type="RUNTIME_ERROR", details=f"błąd post-processingu: {e!r}"[:_DETAILS_MAX]
+            )
+        if report.status == "FAILED":
+            return _fail(node, "POST_PROCESSING_ERROR", report.details,
+                         postprocessing_report=report.model_dump(), history=_record(state))
+        return {"postprocessing_report": report.model_dump(), "trace": [node]}
+
     async def ObslugaBledu(state: OrchestratorState) -> dict[str, Any]:
         r = state["report"]
         counts = s.count_unsupported_task or r.get("failure_type") != "UNSUPPORTED_TASK"
@@ -184,21 +209,24 @@ def build_graph(deps: Deps):
         return lambda st: "Niepowodzenie" if st.get("error_code") else nxt
 
     def after_wait(st: OrchestratorState) -> str:
-        return "Sukces" if st["report"]["status"] == "SUCCESS" else "ObslugaBledu"
+        return "PostProcessing" if st["report"]["status"] == "SUCCESS" else "ObslugaBledu"
 
     def after_error(st: OrchestratorState) -> str:
         return "Niepowodzenie" if st.get("error_code") == "MAX_FAILURES" else "WyborAgenta"
 
     g = StateGraph(OrchestratorState)
     for fn in (Inicjalizacja, DeployPipeline, Klasyfikacja, WyborAgenta, Zlecenie,
-               OczekiwanieNaRaport, Sukces, ObslugaBledu, Niepowodzenie):
+               OczekiwanieNaRaport, PostProcessing, Sukces, ObslugaBledu, Niepowodzenie):
         g.add_node(fn.__name__, fn)
     g.add_edge(START, "Inicjalizacja")
     for src, nxt in (("Inicjalizacja", "DeployPipeline"), ("DeployPipeline", "Klasyfikacja"),
                      ("Klasyfikacja", "WyborAgenta"), ("WyborAgenta", "Zlecenie")):
         g.add_conditional_edges(src, after_ok(nxt), {nxt: nxt, "Niepowodzenie": "Niepowodzenie"})
     g.add_edge("Zlecenie", "OczekiwanieNaRaport")
-    g.add_conditional_edges("OczekiwanieNaRaport", after_wait, {"Sukces": "Sukces", "ObslugaBledu": "ObslugaBledu"})
+    g.add_conditional_edges("OczekiwanieNaRaport", after_wait,
+                            {"PostProcessing": "PostProcessing", "ObslugaBledu": "ObslugaBledu"})
+    g.add_conditional_edges("PostProcessing", after_ok("Sukces"),
+                            {"Sukces": "Sukces", "Niepowodzenie": "Niepowodzenie"})
     g.add_conditional_edges("ObslugaBledu", after_error, {"WyborAgenta": "WyborAgenta", "Niepowodzenie": "Niepowodzenie"})
     g.add_edge("Sukces", END)
     g.add_edge("Niepowodzenie", END)

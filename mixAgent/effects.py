@@ -1,5 +1,5 @@
 import pedalboard as pb
-from config import PARAM_LIMITS, EFFECT_ORDER
+from .config import PARAM_LIMITS, EFFECT_ORDER
 
 
 def _clamp(value: float, key: str) -> float:
