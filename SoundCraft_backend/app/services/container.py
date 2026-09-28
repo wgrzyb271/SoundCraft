@@ -6,6 +6,8 @@ from ..config import settings
 rsync_transfer = RsyncTransfer(
     host=settings.rsync_host,
     remote_path=settings.rsync_remote_path,
+    private_key=settings.sftp_private_key,
+    port=settings.sftp_port,
 )
 
 sftp_transfer = SftpTransfer(

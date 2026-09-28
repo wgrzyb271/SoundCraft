@@ -31,7 +31,12 @@ export async function getResult(requestId: string): Promise<ResultResponse> {
     return response.json();
 }
 
-export async function waitForResult(requestId: string,interval = 2000) {
+export async function waitForResult(
+    requestId: string,
+    initialInterval = 5000,
+    maxInterval = 20000
+) {
+    let interval = initialInterval;
     while (true) {
         const result = await getResult(requestId);
 
@@ -42,6 +47,8 @@ export async function waitForResult(requestId: string,interval = 2000) {
         await new Promise(resolve =>
             setTimeout(resolve, interval)
         );
+
+        interval = Math.min(Math.ceil(interval * 1.5), maxInterval);
     }
 }
 

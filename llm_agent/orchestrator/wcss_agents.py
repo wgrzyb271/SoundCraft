@@ -20,6 +20,7 @@ class WcssSlurmAgent:
     model: str
     supported_categories = frozenset({"A"})
     python_module = "Python/3.10.4-GCCcore-11.3.0"
+    memory = "16G"
 
     def __init__(self, job_tool: SlurmJobTool | None = None):
         self.job_tool = job_tool or SlurmJobTool()
@@ -97,14 +98,14 @@ class WcssSlurmAgent:
             #SBATCH --ntasks-per-node=1
             #SBATCH --gres=gpu:hopper:1
             #SBATCH --cpus-per-task=4
-            #SBATCH --mem=16G
+            #SBATCH --mem={self.memory}
             #SBATCH --partition={partition}
             #SBATCH --time=01:00:00
             #SBATCH --output={stdout}/slurm-%j.out
             #SBATCH --error={stdout}/slurm-%j.err
 
-            set -euo pipefail
             source /etc/profile
+            set -euo pipefail
             module load {python_module}
             """)
 
@@ -165,6 +166,7 @@ class WcssSAMAudioAgent(WcssSlurmAgent):
     model = "sam_audio_base"
     supported_categories = frozenset({"B"})
     python_module = "Python/3.11.5-GCCcore-13.2.0"
+    memory = "64G"
 
     def _script_body(self, task: AgentTask, input_path: Path, output_dir: Path) -> str:
         python = os.environ.get("SAM_AUDIO_PYTHON", "/home/wojgrz4918/venvs/sam-audio/bin/python")

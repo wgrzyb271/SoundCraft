@@ -14,6 +14,9 @@ class TransferService:
         self.rsync=rsync_transfer
         self.sftp=sftp_transfer
 
+    def _sftp_fallback(self, operation: str, error: Exception):
+        print(f"SSH/rsync {operation} failed, trying SFTP fallback: {error}")
+
     def transfer(self, file_path, request_id, upload_type: UploadType):
         match upload_type:
             case UploadType.AUDIO:
@@ -50,13 +53,25 @@ class TransferService:
                 remote_folder=f"{request_id}/output/agent_response"
             case _:
                 raise ValueError("invalid result data type")
-        self.sftp.download(remote_folder, filename, local_path)
+        try:
+            return self.rsync.download(remote_folder, filename, local_path)
+        except Exception as error:
+            self._sftp_fallback("download", error)
+            return self.sftp.download(remote_folder, filename, local_path)
 
     def create_request(self,request_id: str):
-        self.sftp.create_request(request_id)
+        try:
+            return self.rsync.create_request(request_id)
+        except Exception as error:
+            self._sftp_fallback("create", error)
+            return self.sftp.create_request(request_id)
 
     def delete_request(self, request_id:str):
-        self.sftp.delete_request(request_id)
+        try:
+            return self.rsync.delete_request(request_id)
+        except Exception as error:
+            self._sftp_fallback("delete", error)
+            return self.sftp.delete_request(request_id)
 
     def list_result_files(self, request_id:str, result_type:ResultType):
         match result_type:
@@ -71,4 +86,8 @@ class TransferService:
         print(f"RESULT REMOTE FOLDER: {remote_folder}")
         print(f"RESULT FILE PATTERN: {pattern}")
 
-        return self.sftp.list_files(remote_folder,pattern)
+        try:
+            return self.rsync.list_files(remote_folder,pattern)
+        except Exception as error:
+            self._sftp_fallback("list", error)
+            return self.sftp.list_files(remote_folder,pattern)

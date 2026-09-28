@@ -6,3 +6,6 @@ Setup instructions, a local no-GPU demo, and WCSS commands are available in
 
 Polska instrukcja uruchomienia UI, demo i wdrożenia na WCSS:
 [INSTRUKCJA_URUCHOMIENIA.md](INSTRUKCJA_URUCHOMIENIA.md).
+
+Odtworzenie środowisk modeli na WCSS i test produkcyjny bez SAM Audio:
+[WCSS_ODTWORZENIE.md](WCSS_ODTWORZENIE.md).

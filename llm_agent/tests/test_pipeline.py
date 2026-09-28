@@ -171,6 +171,7 @@ class PipelineTests(unittest.TestCase):
                 self.assertIsNotNone(slurm.job)
                 script = Path(slurm.job.script_path).read_text(encoding="utf-8")
                 self.assertIn("#SBATCH --partition=lem-gpu-short", script)
+                self.assertLess(script.index("source /etc/profile"), script.index("set -euo pipefail"))
                 subprocess.run(["bash", "-n", slurm.job.script_path], check=True)
 
     def test_sam_audio_base_handles_open_tasks(self):
@@ -188,6 +189,7 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(report.job_id, "456")
         script = Path(slurm.job.script_path).read_text(encoding="utf-8")
         self.assertIn("facebook/sam-audio-base", script)
+        self.assertIn("#SBATCH --mem=64G", script)
         subprocess.run(["bash", "-n", slurm.job.script_path], check=True)
 
     def test_sam_audio_is_not_a_classic_stem_fallback(self):
