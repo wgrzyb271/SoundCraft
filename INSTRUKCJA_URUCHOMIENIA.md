@@ -157,6 +157,16 @@ Launcher uruchomi:
 - API: `http://127.0.0.1:8000`,
 - UI: `http://127.0.0.1:5173`.
 
+Jeżeli któryś port jest zajęty, zatrzymaj poprzednie uruchomienie albo wybierz
+inne porty jawnie:
+
+```bash
+python run_ui.py --demo --backend-port 8010 --frontend-port 5180
+```
+
+Launcher nie przełącza portów automatycznie, dzięki czemu frontend zawsze
+korzysta z właściwego adresu API.
+
 Backend prześle pliki do `backend.sftp_remote_path`, a działający worker WCSS
 odbierze żądanie. `PASSED` publikuje finalny WAV; `FAILED` publikuje tylko JSON
 z informacją dla UI.

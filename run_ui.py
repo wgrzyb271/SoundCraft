@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import os
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -19,17 +21,52 @@ def _require(command: str) -> None:
         raise SystemExit(f"Missing command: {command}")
 
 
+def _signal_process(process: subprocess.Popen, sig: signal.Signals) -> None:
+    if process.poll() is not None:
+        return
+    try:
+        if os.name == "posix":
+            os.killpg(process.pid, sig)
+        elif sig == signal.SIGTERM:
+            process.terminate()
+        else:
+            process.kill()
+    except ProcessLookupError:
+        pass
+
+
 def _stop(processes: list[subprocess.Popen]) -> None:
     for process in processes:
-        if process.poll() is None:
-            process.terminate()
+        _signal_process(process, signal.SIGTERM)
     deadline = time.monotonic() + 5
     for process in processes:
         if process.poll() is None:
             try:
                 process.wait(timeout=max(0.1, deadline - time.monotonic()))
             except subprocess.TimeoutExpired:
-                process.kill()
+                _signal_process(process, signal.SIGKILL)
+
+
+def _require_free_port(host: str, port: int, option: str) -> None:
+    try:
+        addresses = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    except socket.gaierror as exc:
+        raise SystemExit(f"Invalid host {host!r}: {exc}") from exc
+
+    family, socktype, proto, _, address = addresses[0]
+    with socket.socket(family, socktype, proto) as probe:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            probe.bind(address)
+        except OSError as exc:
+            if exc.errno != errno.EADDRINUSE:
+                raise SystemExit(
+                    f"Cannot bind to {host}:{port}: {exc.strerror or exc}."
+                ) from exc
+            raise SystemExit(
+                f"Port {host}:{port} is already in use. Stop the previous SoundCraft "
+                f"process or select another port with {option}."
+            ) from exc
 
 
 def main() -> None:
@@ -45,6 +82,8 @@ def main() -> None:
     _require("npm")
     if not args.demo and not args.config.is_file():
         parser.error(f"configuration does not exist: {args.config}")
+    _require_free_port(args.backend_host, args.backend_port, "--backend-port")
+    _require_free_port(args.frontend_host, args.frontend_port, "--frontend-port")
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
@@ -64,7 +103,8 @@ def main() -> None:
         "--host", args.backend_host, "--port", str(args.backend_port),
     ]
     frontend = [
-        "npm", "run", "dev", "--", "--host", args.frontend_host, "--port", str(args.frontend_port),
+        "npm", "run", "dev", "--", "--host", args.frontend_host,
+        "--port", str(args.frontend_port), "--strictPort",
     ]
     processes: list[subprocess.Popen] = []
 
@@ -74,8 +114,9 @@ def main() -> None:
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
     try:
-        processes.append(subprocess.Popen(backend, cwd=ROOT / "SoundCraft_backend", env=env))
-        processes.append(subprocess.Popen(frontend, cwd=ROOT / "SoundCraft_frontend", env=env))
+        process_options = {"env": env, "start_new_session": os.name == "posix"}
+        processes.append(subprocess.Popen(backend, cwd=ROOT / "SoundCraft_backend", **process_options))
+        processes.append(subprocess.Popen(frontend, cwd=ROOT / "SoundCraft_frontend", **process_options))
         mode = "DEMO (local, no GPU)" if args.demo else f"WCSS ({args.config})"
         print(f"SoundCraft mode: {mode}", flush=True)
         print(f"UI: http://{args.frontend_host}:{args.frontend_port}", flush=True)
