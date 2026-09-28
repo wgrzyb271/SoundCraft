@@ -30,7 +30,6 @@ export function AudioPreview({
             URL.revokeObjectURL(url);
         };
     }, [originalAudioFile]);
-
     useEffect(() => {
         if (!currentChangesAudioFile) {
             setCurrentChangesUrl(null);
@@ -47,6 +46,7 @@ export function AudioPreview({
 
     return (
         <>
+        <div>
             <fieldset className="audio-div">
                 <legend className="audio-div-title manrope-regular">Original audio</legend>
                 <div className="audio-center-div">
@@ -77,18 +77,18 @@ export function AudioPreview({
             <fieldset className="audio-div">
                 <legend className="audio-div-title manrope-regular"> Current audio changes</legend>
                 <div className="audio-center-div">
-                {currentChangesAudioFile && currentChangesUrl ? (
+                {originalAudioFile && originalAudioUrl ? (
                     <>
-                        <div className = "visualizer-wrapperr">
+                        <div className = "visualizer-wrapper">
                         <AudioVisualizer
-                            blob={currentChangesAudioFile}
+                            blob={originalAudioFile}
                             width={750}
                             height={75}
                         />
                         </div>
                         <AudioPlayer
                             autoPlay={false}
-                            src={currentChangesUrl}
+                            src={originalAudioUrl}
                             showFilledVolume={true}
                             onPlay={() => console.log("onPlay")}
                         />
@@ -101,6 +101,7 @@ export function AudioPreview({
                 )}
                 </div>
             </fieldset>
+        </div>
         </>
     );
 }
