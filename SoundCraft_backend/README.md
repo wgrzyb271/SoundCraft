@@ -11,16 +11,20 @@ Backend wykorzystuje **FastAPI**, **FFmpeg** oraz **SFTP** i **rsync** jako back
 ```text
 Client
   │
-  │ POST /upload
+  │ POST /upload/audio
   ▼
 FastAPI
   │
   ├── zapis audio
   ├── konwersja do WAV
-  ├── metadata.json
+  ├── upload audio
   │
   ▼
 HPC / request_<UUID>/
+  │
+  │ POST /upload/<UUID>/prompt
+  ▼
+HPC / request_<UUID>/input/
   │
   │ Agent
   ▼
@@ -30,7 +34,7 @@ HPC / request_<UUID>/output/
   ▼
 FastAPI
   │
-  ├── GET /result/<UUID>
+  ├── GET /result/<UUID>/agent_response
   └── GET /result/<UUID>/audio
 ```
 
@@ -50,58 +54,105 @@ Struktura:
 
 ```text
 backend_files/
-└── request_<UUID>/
+└── <request_UUID>/
     ├── input/
-    │   ├── audio.wav
-    │   └── metadata.json
+    │   ├── audio_folder/
+    │   │   └── audio.wav
+    │   │
+    │   └── prompt_folder/
+    │       └── prompt_<timestamp>.json
     │
     └── output/
-        ├── audio.wav
-        └── response.json
+        ├── audio_folder/
+        │   ├── changed_audio_<timestamp>.wav
+        │   └── ...
+        │
+        └── agent_response/
+            ├── response_<timestamp>.json
+            └── ...
 ```
 
 ---
 
-## 3. Upload — `POST /upload`
+## 3. Upload — `POST /upload/audio`
 
 Endpoint przyjmuje `multipart/form-data`.
 
 ### Input
 
-| Pole     | Typ    | Opis                  |
-| -------- | ------ | --------------------- |
-| `prompt` | string | Instrukcja dla agenta |
-| `audio`  | file   | Plik audio            |
+| Pole    | Typ  | Opis       |
+| ------- | ---- | ---------- |
+| `audio` | file | Plik audio |
 
 Przykład:
 
 ```powershell
-curl.exe -X POST "http://127.0.0.1:8000/upload" `
-  -F "prompt=test upload" `
+curl.exe -X POST "http://127.0.0.1:8000/upload/audio" `
   -F "audio=@C:\audio\test.wav"
 ```
 
 Backend:
 
 1. generuje `request_id`,
-2. zapisuje plik,
-3. sprawdza format audio,
-4. w razie potrzeby konwertuje audio przez FFmpeg,
-5. tworzy `metadata.json`,
-6. tworzy katalog requestu na HPC,
-7. przesyła dane na HPC przez SFTP.
+2. tworzy strukturę katalogów requestu na HPC,
+3. zapisuje plik,
+4. sprawdza format audio,
+5. w razie potrzeby konwertuje audio przez FFmpeg,
+6. przesyła audio do `input/audio_folder/` przez rsync lub SFTP.
 
 ---
 
-## 4. Format inputu dla agenta
+## 4. Upload promptu — `POST /upload/{request_id}/prompt`
+
+Prompt jest przesyłany osobno dla istniejącego `request_id`.
+
+### Input
+
+| Pole     | Typ    | Opis                  |
+| -------- | ------ | --------------------- |
+| `prompt` | string | Instrukcja dla agenta |
+
+Przykład:
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8000/upload/<request_id>/prompt" `
+  -F "prompt=make the drums more energetic"
+```
+
+Backend tworzy plik:
+
+```text
+input/
+└── prompt_folder/
+    └── prompt_<timestamp>.json
+```
+
+Przykładowa zawartość:
+
+```json
+{
+  "request_id": "25b356a4-a8e5-447a-a6a4-83c1febed4eb",
+  "prompt": "make the drums more energetic",
+  "created_at": "2026-09-25T21:42:00+00:00",
+  "expires_at": "2026-09-25T21:47:00+00:00",
+  "status": "processing"
+}
+```
+
+---
+
+## 5. Format inputu dla agenta
 
 Agent otrzymuje:
 
 ```text
-request_<UUID>/
-├── input/
-│   ├── audio.wav
-│   └── metadata.json
+<request_UUID>/
+└── input/
+    ├── audio_folder/
+    │   └── audio.wav
+    │
+    └── prompt_folder/
+        └── prompt_<timestamp>.json
 ```
 
 ### `audio.wav`
@@ -114,30 +165,29 @@ Stereo
 44100 Hz
 ```
 
-### `metadata.json`
+### `prompt_<timestamp>.json`
 
-```json
-{
-  "request_id": "25b356a4-a8e5-447a-a6a4-83c1febed4eb",
-  "prompt": "make the drums more energetic",
-  "audio": "audio.wav"
-}
-```
+Zawiera informacje potrzebne agentowi do przetworzenia requestu, w tym `request_id`, prompt oraz informacje o czasie utworzenia i wygaśnięcia requestu.
 
 ---
 
-## 5. Output agenta
+## 6. Output agenta
 
 Po zakończeniu pracy agent powinien utworzyć:
 
 ```text
-request_<UUID>/
+<request_UUID>/
 └── output/
-    ├── audio.wav
-    └── response.json
+    ├── audio_folder/
+    │   ├── changed_audio_<timestamp>.wav
+    │   └── ...
+    │
+    └── agent_response/
+        ├── response_<timestamp>.json
+        └── ...
 ```
 
-### `response.json`
+### `response_<timestamp>.json`
 
 Przykładowy format:
 
@@ -148,21 +198,22 @@ Przykładowy format:
 }
 ```
 
-Zawartość `response.json` może zostać rozszerzona w zależności od potrzeb agenta.
+Zawartość odpowiedzi może zostać rozszerzona w zależności od potrzeb agenta.
 
 ---
 
-## 6. Pobieranie wyniku
+## 7. Pobieranie wyniku
 
-### `GET /result/{request_id}`
+### `GET /result/{request_id}/agent_response`
 
-Pobiera status oraz `response.json`.
+Pobiera status oraz najnowszy `response_<timestamp>.json`.
 
 Jeżeli agent jeszcze nie zakończył pracy:
 
 ```json
 {
-  "status": "processing"
+  "status": "processing",
+  "request_id": "25b356a4-a8e5-447a-a6a4-83c1febed4eb"
 }
 ```
 
@@ -172,6 +223,7 @@ Po zakończeniu:
 {
   "status": "completed",
   "request_id": "25b356a4-a8e5-447a-a6a4-83c1febed4eb",
+  "filename": "response_20260925_231942.json",
   "response": {
     "status": "success",
     "message": "Audio processed successfully"
@@ -181,10 +233,10 @@ Po zakończeniu:
 
 ### `GET /result/{request_id}/audio`
 
-Pobiera wygenerowany plik:
+Pobiera najnowszy plik:
 
 ```text
-output/audio.wav
+output/audio_folder/changed_audio_<timestamp>.wav
 ```
 
 Zwracany jest jako:
@@ -195,23 +247,26 @@ Content-Type: audio/wav
 
 ---
 
-## 7. Endpointy
+## 8. Endpointy
 
-| Method   | Endpoint                     | Opis                  |
-| -------- | ---------------------------- | --------------------- |
-| `POST`   | `/upload`                    | Upload audio + prompt |
-| `GET`    | `/result/{request_id}`       | Status i wynik JSON   |
-| `GET`    | `/result/{request_id}/audio` | Pobranie audio        |
-| `DELETE` | `/result/{request_id}`       | Usunięcie requestu    |
+| Method   | Endpoint                              | Opis                       |
+| -------- | ------------------------------------- | -------------------------- |
+| `POST`   | `/upload/audio`                       | Upload audio               |
+| `POST`   | `/upload/{request_id}/prompt`         | Upload prompt              |
+| `GET`    | `/result/{request_id}/agent_response` | Odpowiedź od agenta        |
+| `GET`    | `/result/{request_id}/audio`          | Pobranie zmienionego audio |
+| `DELETE` | `/result/{request_id}`                | Usunięcie requestu         |
 
 ---
 
-## 8. Transfer plików
+## 9. Transfer plików
 
 Transfer plików na HPC oraz pobieranie wyników odbywa się przez:
 
 ```text
-SFTP
+Rsync
+  │
+  └── backup ──► SFTP
 ```
 
 Komunikacja:
@@ -219,16 +274,19 @@ Komunikacja:
 ```text
 FastAPI
    │
-   │ SFTP
-   ▼
-WCSS / HPC
+   ├── rsync
+   │
+   └── SFTP
+        │
+        ▼
+    WCSS / HPC
 ```
 
 ---
 
-## 9. Konfiguracja
+## 10. Konfiguracja
 
-Konfiguracja znajduje się w `.env`:
+Konfiguracja znajduje się w `.env` / `.config`:
 
 ```env
 SFTP_HOST=ui.wcss.pl
@@ -240,7 +298,7 @@ SFTP_PORT=22
 
 ---
 
-## 10. Uruchomienie
+## 11. Uruchomienie
 
 Aktywacja środowiska:
 
@@ -262,43 +320,79 @@ http://127.0.0.1:8000/docs
 
 ---
 
-## 11. Pełny workflow
+## 12. Pełny workflow
 
 ```text
-POST /upload
+POST /upload/audio
       │
       ▼
 request_id = UUID
       │
       ▼
-audio + metadata.json
+audio.wav
       │
       ▼
-HPC/request_<UUID>/input/
+HPC/<request_UUID>/input/audio_folder/
+      │
+      │
+POST /upload/<request_id>/prompt
+      │
+      ▼
+prompt_<timestamp>.json
+      │
+      ▼
+HPC/<request_UUID>/input/prompt_folder/
       │
       │ Agent
       ▼
-HPC/request_<UUID>/output/
+HPC/<request_UUID>/output/
       │
-      ├── response.json
-      └── audio.wav
+      ├── audio_folder/
+      │     └── changed_audio_<timestamp>.wav
+      │
+      └── agent_response/
+            └── response_<timestamp>.json
       │
       ▼
-GET /result/<UUID>
+GET /result/<UUID>/agent_response
       │
       ▼
 GET /result/<UUID>/audio
 ```
 
-Najważniejszym kontraktem pomiędzy backendem a agentem jest struktura:
+Najważniejszym kontraktem pomiędzy backendem a agentem jest struktura plików:
 
 ```text
-request_<UUID>/
+<request_UUID>/
 ├── input/
-│   ├── audio.wav
-│   └── metadata.json
+│   ├── audio_folder/
+│   │   └── audio.wav
+│   │
+│   └── prompt_folder/
+│       └── prompt_<timestamp>.json
+│       └── ...
 │
 └── output/
-    ├── audio.wav
-    └── response.json
+    ├── audio_folder/
+    │   ├── changed_audio_<timestamp>.wav
+    │   └── ...
+    │
+    └── agent_response/
+        ├── response_<timestamp>.json
+        └── ...
 ```
+
+Backend zapisuje:
+
+* plik audio wejściowy do `input/audio_folder/`,
+* dane promptu wraz z metadanymi do `input/prompt_folder/`.
+
+Agent zapisuje:
+
+* przetworzony plik audio do `output/audio_folder/`,
+* odpowiedź agenta w formacie JSON do `output/agent_response/`.
+
+Backend pobiera najnowszy plik wynikowy na podstawie odpowiedniego prefiksu i rozszerzenia:
+
+* `changed_audio_*.wav` dla przetworzonego audio,
+* `response_*.json` dla odpowiedzi agenta.

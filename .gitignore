@@ -1,9 +1,3 @@
-# Ignoruj wszystko w katalogu głównym
-/*
-
-# Wyjątki: zachowaj katalog llm_agent oraz plik .gitignore
-!/llm_agent/
-!.gitignore
 # gitignore settings for frontend
 
 # Logs
@@ -31,7 +25,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# gitignore settings for backend
+#gitignore settings for backend
 # Python
 __pycache__/
 *.py[cod]
@@ -46,14 +40,3 @@ __pycache__/
 # Python virtual environments
 .venv/
 venv/
-
-# Audio, models, checkpoints & benchmarks
-*.wav
-*.pth
-*.safetensors
-eval/
-sam_base/
-sam_large/
-samuel_benchmark/
-agent_man/
-slurm.sh

@@ -1,0 +1,11 @@
+torch==2.4.1
+torchaudio==2.4.1
+numpy
+soundfile
+PyYAML
+einops
+beartype
+packaging
+rotary-embedding-torch
+pydantic
+librosa
