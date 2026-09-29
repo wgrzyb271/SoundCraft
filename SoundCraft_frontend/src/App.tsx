@@ -4,39 +4,56 @@ import { AudioView } from './components/audioComponents/AudioView'
 import './app.css'
 import './fontStylesheet.css'
 import { useState } from 'react'
-import { uploadAudio, waitForResult, downloadResultAudio } from './api/soundcraft'
+import { uploadAudio, connectToResult, downloadResultAudio, uploadPrompt, getAgentResponse } from './api/soundcraft'
 function App() {
 
   const [audioFile, setAudioFile] =useState<File | null>(null);
   const [agentResponse, setAgentResponse] =useState<Record<string, unknown> | null>(null);
   const [resultAudioFile, setResultAudioFile] = useState<File | null>(null);
+   const [request_id, setRequestId] = useState<string|null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handlePromptSubmit = async (prompt: string) => {
+  const handleAudioUpload = async (file:File)=>{
+    try{
+      setAudioFile(file);
+      console.log("DEBUG HANDLE AUDIO UPLOAD")
+      const uploadResult = await uploadAudio(file);
+      console.log("REQUEST ID: ", uploadResult.request_id)
+      setRequestId(uploadResult.request_id)
+    }
+    catch(error){
+      console.error(error);
+      alert("Audio upload failed.")
+    }
+  }
+  const handlePromptSubmit = async (prompt: string): Promise<Boolean>=>{
 
-      if (!audioFile) {
+      if (!request_id) {
             alert("Please upload an audio file first.");
-            return;
+            return false;
         }
 
       try {
           setIsProcessing(true);
-
           setAgentResponse(null);
           setResultAudioFile(null);
 
-          const uploadResult = await uploadAudio(audioFile, prompt);
-          const requestId = uploadResult.request_id;
-          const completedResult = await waitForResult(requestId);
+          const resultPromise = connectToResult(request_id);
 
-          setAgentResponse(completedResult.response);
-          const resultFile = await downloadResultAudio(requestId);
+          await uploadPrompt(request_id, prompt);
+          await resultPromise;
+
+          const result = await getAgentResponse(request_id);
+          setAgentResponse(result);
+
+          const resultFile = await downloadResultAudio(request_id);
           setResultAudioFile(resultFile);
-
+          return true;
         } 
-        catch (error) {
+      catch (error) {
             console.error(error);
             alert("Something went wrong.");
+            return false;
         } 
         finally {
             setIsProcessing(false);
@@ -47,7 +64,7 @@ function App() {
     <ToolBar></ToolBar>
       <section id="center">
         <ChatSection onPromptSubmit={handlePromptSubmit} agentResponse={agentResponse}></ChatSection>
-        <AudioView setAudioFile={setAudioFile} audioFile={audioFile} resultAudioFile={resultAudioFile}></AudioView>
+        <AudioView onAudioSelected={handleAudioUpload} audioFile={audioFile} resultAudioFile={resultAudioFile}></AudioView>
       </section>
     </>
   )

@@ -4,11 +4,11 @@ import { AudioPreview } from "./PreviewAudioView";
 
 type AudioViewProps = { 
     audioFile: File | null;
-    setAudioFile: (file: File | null) => void; 
     resultAudioFile: File | null;
+    onAudioSelected:(file:File)=>void;
     };
 
-export function AudioView({audioFile, setAudioFile, resultAudioFile}:AudioViewProps) {
+export function AudioView({audioFile, resultAudioFile,onAudioSelected}:AudioViewProps) {
 
     return (
         <section className="audio-preview-section">
@@ -17,7 +17,7 @@ export function AudioView({audioFile, setAudioFile, resultAudioFile}:AudioViewPr
                     <AudioPreview originalAudioFile={audioFile} currentChangesAudioFile={resultAudioFile}></AudioPreview>
                 </>
             ) : (
-                <AudioUploader setAudioFile={setAudioFile} />
+                <AudioUploader onAudioSelected={onAudioSelected} />
             )}
         </section>
     );

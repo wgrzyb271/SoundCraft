@@ -1,8 +1,13 @@
-export interface UploadResponse{
+export interface UploadAudioResponse{
+    status:"received";
+    request_id:string,
+    file_name:string;
+}
+
+export interface UploadPromptResponse{
     status:"received";
     request_id:string,
     prompt:string;
-    file_name:string;
 }
 
 export interface ProcessingResponse{

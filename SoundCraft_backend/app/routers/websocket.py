@@ -32,3 +32,19 @@ async def websocket_endpoint(websocket:WebSocket, request_id:str):
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(request_id)
+
+#temp endpoint for testing Frontend-Backend connection
+@ws_router.post("/ws-test/{request_id}/complete")
+async def test_complete(request_id: str):
+    await manager.notify(
+        request_id,
+        {
+            "type": "completed",
+            "request_id": request_id,
+        },
+    )
+
+    return {
+        "status": "sent",
+        "request_id": request_id,
+    }

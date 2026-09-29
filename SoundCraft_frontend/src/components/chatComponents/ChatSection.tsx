@@ -11,7 +11,7 @@ type ChatMessage ={
 
 
 type ChatSectionProps = {
-    onPromptSubmit: (prompt: string) => void;
+    onPromptSubmit: (prompt: string) => Promise<Boolean>;
     agentResponse: Record<string, unknown> | null
 };
 
@@ -46,22 +46,24 @@ export function ChatSection({onPromptSubmit, agentResponse}:ChatSectionProps){
     },[agentResponse])
 
 
-     const handleSubmitUserMassage = (e: React.FormEvent<HTMLFormElement>)=>{
+     const handleSubmitUserMassage = async (e: React.FormEvent<HTMLFormElement>)=>{
         e.preventDefault();
-        if(!userMassage.trim()){
+        const message = userMassage.trim()
+        if(!message){
             return
         }
 
-
-        setMessages(prev => [
+        const success = await onPromptSubmit(message)
+        if(success){
+            setMessages(prev => [
             ...prev,
             {sender:"user",
             messageValue:userMassage
             }
         ])
 
+        }
 
-        onPromptSubmit(userMassage)
         setUserMassage('')
      }
     return (
