@@ -4,6 +4,35 @@
 source /etc/profile
 set -euo pipefail
 
+initialize_modules() {
+    if type module >/dev/null 2>&1; then
+        return
+    fi
+
+    local init_script
+    for init_script in \
+        /etc/profile.d/modules.sh \
+        /usr/share/Modules/init/bash \
+        /usr/share/lmod/lmod/init/bash
+    do
+        if [[ -r "$init_script" ]]; then
+            # Environment Modules udostępnia `module` jako funkcję powłoki.
+            # Na węźle logowania samo /etc/profile nie zawsze ładuje jej dla
+            # skryptu nieinteraktywnego.
+            source "$init_script"
+            break
+        fi
+    done
+
+    if ! type module >/dev/null 2>&1; then
+        echo "Environment Modules is unavailable." >&2
+        echo "Checked /etc/profile.d/modules.sh, /usr/share/Modules/init/bash and /usr/share/lmod/lmod/init/bash." >&2
+        exit 2
+    fi
+}
+
+initialize_modules
+
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 USER_HOME_DIR="${HOME:?HOME is not set}"
 WORK_ROOT="${TMPDIR:-${USER_HOME_DIR}/tmp}"
