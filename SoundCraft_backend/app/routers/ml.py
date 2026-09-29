@@ -5,7 +5,7 @@ from .websocket import manager
 ml_router = APIRouter()
 
 class MLCompletedRequest(BaseModel):
-    request_id = str
+    request_id : str
 
 @ml_router.post("/internal/ml/completed")
 async def ml_completed (data:MLCompletedRequest):
