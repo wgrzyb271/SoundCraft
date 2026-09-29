@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .config import Settings
+from .callback import notify_backend
 from .wcss_request import process_request
 
 
@@ -28,7 +29,7 @@ def _claim(request_dir: Path) -> int | None:
         return None
 
 
-def _write_unhandled_failure(request_dir: Path, exc: Exception) -> None:
+def _write_unhandled_failure(request_dir: Path, exc: Exception) -> dict[str, object]:
     output = request_dir / "output" / "agent_response"
     output.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
@@ -41,6 +42,7 @@ def _write_unhandled_failure(request_dir: Path, exc: Exception) -> None:
     }
     target = output / f"response_{stamp}.json"
     target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return payload
 
 
 async def run_worker(root: Path, settings: Settings, once: bool, poll_s: float) -> None:
@@ -56,9 +58,13 @@ async def run_worker(root: Path, settings: Settings, once: bool, poll_s: float) 
             try:
                 os.write(descriptor, f"pid={os.getpid()}\n".encode())
                 os.close(descriptor)
-                await process_request(request_dir, settings)
+                payload = await process_request(request_dir, settings)
             except Exception as exc:  # noqa: BLE001
-                _write_unhandled_failure(request_dir, exc)
+                payload = _write_unhandled_failure(request_dir, exc)
+            try:
+                await notify_backend(request_dir.name, payload, settings)
+            except Exception as exc:  # callback nigdy nie może zatrzymać workera
+                print(f"Callback requestu {request_dir.name} nie powiódł się: {exc}", flush=True)
             finally:
                 lock.unlink(missing_ok=True)
         if once:
@@ -74,6 +80,9 @@ def cli() -> None:
     parser.add_argument("--poll", type=float, default=3.0)
     args = parser.parse_args()
     settings = Settings.load(args.config)
+    errors = settings.validate()
+    if errors:
+        parser.error("; ".join(errors))
     root = args.root or settings.request_root
     if not root:
         parser.error("podaj --root albo ustaw paths.request_root w config.yaml")

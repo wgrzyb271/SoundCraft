@@ -75,6 +75,8 @@ def main() -> None:
     parser.add_argument("--config", type=Path, default=ROOT / "llm_agent" / "config.local.yaml")
     parser.add_argument("--backend-host", default="127.0.0.1")
     parser.add_argument("--backend-port", type=int, default=8000)
+    parser.add_argument("--callback-host", default="127.0.0.1")
+    parser.add_argument("--callback-port", type=int, default=8001)
     parser.add_argument("--frontend-host", default="127.0.0.1")
     parser.add_argument("--frontend-port", type=int, default=5173)
     args = parser.parse_args()
@@ -84,6 +86,8 @@ def main() -> None:
         parser.error(f"configuration does not exist: {args.config}")
     _require_free_port(args.backend_host, args.backend_port, "--backend-port")
     _require_free_port(args.frontend_host, args.frontend_port, "--frontend-port")
+    if not args.demo:
+        _require_free_port(args.callback_host, args.callback_port, "--callback-port")
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
@@ -92,6 +96,7 @@ def main() -> None:
         f"http://localhost:{args.frontend_port}",
         f"http://127.0.0.1:{args.frontend_port}",
     ))
+    env["SOUNDCRAFT_INTERNAL_BACKEND_URL"] = f"http://{args.backend_host}:{args.backend_port}"
     if args.demo:
         env["SOUNDCRAFT_DEMO"] = "1"
         env.pop("SOUNDCRAFT_CONFIG", None)
@@ -106,6 +111,10 @@ def main() -> None:
         "npm", "run", "dev", "--", "--host", args.frontend_host,
         "--port", str(args.frontend_port), "--strictPort",
     ]
+    callback_gateway = [
+        sys.executable, "-m", "uvicorn", "app.callback_gateway:app",
+        "--host", args.callback_host, "--port", str(args.callback_port),
+    ]
     processes: list[subprocess.Popen] = []
 
     def shutdown(_signum=None, _frame=None):
@@ -116,12 +125,18 @@ def main() -> None:
     try:
         process_options = {"env": env, "start_new_session": os.name == "posix"}
         processes.append(subprocess.Popen(backend, cwd=ROOT / "SoundCraft_backend", **process_options))
+        if not args.demo:
+            processes.append(subprocess.Popen(
+                callback_gateway, cwd=ROOT / "SoundCraft_backend", **process_options
+            ))
         processes.append(subprocess.Popen(frontend, cwd=ROOT / "SoundCraft_frontend", **process_options))
         mode = "DEMO (local, no GPU)" if args.demo else f"WCSS ({args.config})"
         print(f"SoundCraft mode: {mode}", flush=True)
         print(f"UI: http://{args.frontend_host}:{args.frontend_port}", flush=True)
         print(f"API: http://{args.backend_host}:{args.backend_port}", flush=True)
-        print("Press Ctrl+C to stop both processes.", flush=True)
+        if not args.demo:
+            print(f"Callback gateway: http://{args.callback_host}:{args.callback_port}", flush=True)
+        print("Press Ctrl+C to stop all processes.", flush=True)
         while all(process.poll() is None for process in processes):
             time.sleep(0.5)
         failed = next((process.returncode for process in processes if process.poll() is not None), 1)

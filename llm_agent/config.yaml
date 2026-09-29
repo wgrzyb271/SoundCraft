@@ -26,6 +26,17 @@ paths:
   # Ten sam katalog co SFTP_REMOTE_PATH/RSYNC_REMOTE_PATH backendu na WCSS.
   request_root: /home/USER/backend_files
 
+# URL musi być osiągalny z węzła CPU, na którym działa worker WCSS.
+# `localhost` laptopa nie jest widoczny z WCSS. Token musi być taki sam jak
+# backend.callback_token w konfiguracji laptopa.
+callback:
+  url: ""
+  token: ""
+  request_timeout_s: 5
+  total_timeout_s: 30
+  max_attempts: 4
+  retry_base_s: 2
+
 wcss:
   slurm_account: WCSS_ACCOUNT
   slurm_qos: WCSS_ACCOUNT
@@ -59,6 +70,8 @@ backend:
   sftp_private_key: /home/local-user/.ssh/id_ed25519
   sftp_port: 22
   processing_ttl: 3600
+  callback_token: ""
+  completion_wait_timeout: 5400
 
 mcp:
   command: ""         # puste = lokalny stub deploy

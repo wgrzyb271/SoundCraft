@@ -33,7 +33,8 @@ zrób wokal głośniej
 
 W demo modele GPU są symulowane, ale działają prawdziwe: upload HTTP,
 orkiestrator, routing, fallback, `mixAgent`, Pedalboard, `PostProcessing`,
-polling UI i pobieranie finalnego WAV. Zatrzymanie `Ctrl+C` kończy oba procesy.
+lokalne powiadomienie WebSocket i pobieranie finalnego WAV. Zatrzymanie
+`Ctrl+C` kończy oba procesy.
 
 ## 3. Prywatny plik konfiguracyjny
 
@@ -52,6 +53,8 @@ Uzupełnij `llm_agent/config.local.yaml`:
 - `agents.demucs` — Python Demucs, skrypt agenta i katalog `llm_agent`;
 - `agents.sam_audio` — Python SAM Audio, katalog agenta i ID checkpointu;
 - `backend` — host rsync/SFTP, zdalny katalog, użytkownik i lokalny klucz SSH.
+- `callback` — osiągalny z WCSS URL callbacku i jego token;
+- `backend.callback_token` — ten sam token po stronie laptopa.
 
 Ważne zależności ścieżek:
 
@@ -123,13 +126,12 @@ Ustaw odpowiednie `agents.sam_audio.python`, `agents.sam_audio.root` oraz
 
 ```bash
 cd /home/USER/SoundCraft
-source .venv-orchestrator/bin/activate
-python -m llm_agent.orchestrator.wcss_worker \
-  --config llm_agent/config.local.yaml
+./scripts/submit_wcss_worker.sh
 ```
 
 Worker obserwuje `paths.request_root`, wybiera model i wysyła zadanie przez
-Slurm. Do pojedynczego przebiegu, np. z cyklicznego skryptu, użyj `--once`.
+Slurm. Sam worker również działa jako lekki job CPU, a nie jako stały proces na
+węźle dostępowym.
 
 Test jednego istniejącego requestu:
 
@@ -155,7 +157,13 @@ python run_ui.py --config llm_agent/config.local.yaml
 Launcher uruchomi:
 
 - API: `http://127.0.0.1:8000`,
+- ograniczony gateway callbacku: `http://127.0.0.1:8001`,
 - UI: `http://127.0.0.1:5173`.
+
+Gateway udostępnia wyłącznie `/health` i `/internal/ml/completed`; nie wystawia
+uploadu ani pobierania wyników. Do testu callbacku z WCSS można skierować na
+port 8001 tymczasowy tunel HTTPS. UI czeka lokalnie przez WebSocket zamiast
+odpytywać WCSS.
 
 Jeżeli któryś port jest zajęty, zatrzymaj poprzednie uruchomienie albo wybierz
 inne porty jawnie:

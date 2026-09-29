@@ -33,23 +33,61 @@ export async function getResult(requestId: string): Promise<ResultResponse> {
 
 export async function waitForResult(
     requestId: string,
-    initialInterval = 5000,
-    maxInterval = 20000
+    timeoutMs = 5_400_000
 ) {
-    let interval = initialInterval;
-    while (true) {
-        const result = await getResult(requestId);
+    const websocketUrl = new URL(
+        `/ws/result/${encodeURIComponent(requestId)}`,
+        API_URL
+    );
+    websocketUrl.protocol = websocketUrl.protocol === "https:" ? "wss:" : "ws:";
 
-        if (result.status === "completed") {
-            return result;
+    try {
+        await new Promise<void>((resolve, reject) => {
+            const socket = new WebSocket(websocketUrl);
+            let finished = false;
+            const finish = (callback: () => void) => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timer);
+                socket.close();
+                callback();
+            };
+            const timer = window.setTimeout(() => {
+                finish(() => reject(new Error("Processing notification timed out")));
+            }, timeoutMs);
+
+            socket.onmessage = event => {
+                const notice = JSON.parse(event.data) as { status?: string };
+                if (notice.status === "completed") {
+                    finish(resolve);
+                } else if (notice.status === "timeout") {
+                    finish(() => reject(new Error("WCSS processing timed out")));
+                }
+            };
+            socket.onerror = () => {
+                finish(() => reject(new Error("Completion WebSocket failed")));
+            };
+            socket.onclose = () => {
+                if (!finished) {
+                    finish(() => reject(new Error("Completion WebSocket closed unexpectedly")));
+                }
+            };
+        });
+    } catch (notificationError) {
+        // Jedna próba odzyskania wyniku po awarii/timeout callbacku. Bez pętli
+        // i bez cyklicznego otwierania połączeń do WCSS.
+        const recovered = await getResult(requestId);
+        if (recovered.status === "completed") {
+            return recovered;
         }
-
-        await new Promise(resolve =>
-            setTimeout(resolve, interval)
-        );
-
-        interval = Math.min(Math.ceil(interval * 1.5), maxInterval);
+        throw notificationError;
     }
+
+    const result = await getResult(requestId);
+    if (result.status !== "completed") {
+        throw new Error("Backend was notified, but the result file is unavailable");
+    }
+    return result;
 }
 
 export async function downloadResultAudio(requestId: string): Promise<File> {

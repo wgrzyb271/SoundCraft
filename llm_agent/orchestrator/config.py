@@ -88,6 +88,14 @@ class Settings:
     user_root: str = "/tmp/orkiestrator_users"  # tylko dla lokalnego stuba deploy; realny deploy = MCP deploy_user_pipeline
     request_root: str | None = None  # katalog współdzielony backend <-> worker WCSS
 
+    # --- callback WCSS -> backend po zapisaniu response_*.json ---
+    callback_url: str | None = None
+    callback_token: str | None = field(default=None, repr=False)
+    callback_request_timeout_s: float = 5.0
+    callback_total_timeout_s: float = 30.0
+    callback_max_attempts: int = 4
+    callback_retry_base_s: float = 2.0
+
     # --- graf ---
     max_graph_steps: int = 80  # recursion_limit LangGraph (bezpiecznik przed zapętleniem)
 
@@ -105,6 +113,18 @@ class Settings:
             errs.append("agent_timeout_s musi być > 0")
         if self.postprocessing_timeout_s <= 0:
             errs.append("postprocessing_timeout_s musi być > 0")
+        if self.callback_request_timeout_s <= 0:
+            errs.append("callback.request_timeout_s musi być > 0")
+        if self.callback_total_timeout_s <= 0:
+            errs.append("callback.total_timeout_s musi być > 0")
+        if self.callback_max_attempts < 1:
+            errs.append("callback.max_attempts musi być >= 1")
+        if self.callback_retry_base_s < 0:
+            errs.append("callback.retry_base_s musi być >= 0")
+        if self.callback_url and not self.callback_token:
+            errs.append("callback.token jest wymagany, gdy ustawiono callback.url")
+        if self.callback_url and not self.callback_url.startswith(("http://", "https://")):
+            errs.append("callback.url musi zaczynać się od http:// albo https://")
         if self.classifier_mode not in _CLASSIFIER_MODES:
             errs.append(f"classifier_mode musi być jednym z: {', '.join(_CLASSIFIER_MODES)} (jest: {self.classifier_mode!r})")
         if not self.deepseek_base_url.rstrip("/").startswith(DEEPSEEK_BASE_URL):
@@ -140,7 +160,8 @@ class Settings:
 
 # ---------------------------------------------------------------------- plik konfiguracyjny
 _TOP_LEVEL_KEYS = {
-    "debug", "api_keys", "env", "deepseek", "orchestrator", "paths", "mcp", "wcss", "agents", "backend"
+    "debug", "api_keys", "env", "deepseek", "orchestrator", "paths", "mcp", "wcss", "agents",
+    "backend", "callback",
 }
 
 
@@ -227,6 +248,28 @@ def _kwargs_from_file(path: Path) -> dict[str, Any]:
     if paths.get("request_root"):
         kw["request_root"] = _path_or_command(path, paths["request_root"])
 
+    callback = _section(data, "callback", {
+        "url", "token", "request_timeout_s", "total_timeout_s", "max_attempts", "retry_base_s",
+    })
+    if callback.get("url"):
+        kw["callback_url"] = str(callback["url"])
+    if callback.get("token"):
+        kw["callback_token"] = str(callback["token"])
+    if "request_timeout_s" in callback:
+        kw["callback_request_timeout_s"] = float(callback["request_timeout_s"])
+    if "total_timeout_s" in callback:
+        kw["callback_total_timeout_s"] = float(callback["total_timeout_s"])
+    if "max_attempts" in callback:
+        kw["callback_max_attempts"] = int(callback["max_attempts"])
+    if "retry_base_s" in callback:
+        kw["callback_retry_base_s"] = float(callback["retry_base_s"])
+    if callback.get("token") and os.name == "posix" and path.stat().st_mode & 0o077:
+        warnings.warn(
+            f"{path} zawiera callback.token, a jest czytelny dla innych użytkowników — "
+            f"ustaw `chmod 600 {path}`",
+            stacklevel=3,
+        )
+
     mcp = _section(data, "mcp", {"command", "args", "env"})
     if mcp.get("command"):
         kw["mcp_command"] = str(mcp["command"])
@@ -275,6 +318,7 @@ def _kwargs_from_file(path: Path) -> dict[str, Any]:
     _section(data, "backend", {
         "rsync_host", "rsync_remote_path", "sftp_host", "sftp_username",
         "sftp_remote_path", "sftp_private_key", "sftp_port", "processing_ttl",
+        "callback_token", "completion_wait_timeout",
     })
 
     if "debug" in data:

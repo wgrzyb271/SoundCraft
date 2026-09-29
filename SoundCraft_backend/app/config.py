@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     sftp_private_key:str = ""
     sftp_port:int=22
     processing_ttl:int = 60 #in sec
+    callback_token:str = ""
+    completion_wait_timeout:float = 5400.0
 
     model_config = SettingsConfigDict(
         env_file=(".env",".config"),

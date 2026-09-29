@@ -163,7 +163,57 @@ backend:
   sftp_private_key: /Users/glitch/.ssh/id_ed25519
   sftp_port: 22
   processing_ttl: 3600
+  callback_token: "TEN_SAM_LOSOWY_TOKEN_CO_NA_WCSS"
+  completion_wait_timeout: 5400
 ```
+
+Po zakończeniu pipeline'u worker WCSS wysyła pojedyncze, uwierzytelnione
+powiadomienie HTTP. Backend przekazuje je do UI przez WebSocket, dlatego UI nie
+odpytuje cyklicznie WCSS. URL callbacku musi być osiągalny z węzłów WCSS —
+`127.0.0.1` i adres LAN laptopa zwykle nie zadziałają.
+
+Konfiguracja na WCSS:
+
+```yaml
+callback:
+  url: https://PUBLICZNY-LUB-TUNELOWANY-ADRES/internal/ml/completed
+  token: "TEN_SAM_LOSOWY_TOKEN_CO_NA_LAPTOPIE"
+  request_timeout_s: 5
+  total_timeout_s: 30
+  max_attempts: 4
+  retry_base_s: 2
+```
+
+Callback próbuje maksymalnie cztery razy, z opóźnieniem wykładniczym, ale kończy
+wszystkie próby po 30 sekundach. Błąd callbacku nie usuwa wyniku — JSON i WAV
+pozostają w katalogu requestu na WCSS.
+
+Przed testem modelu sprawdź callback z WCSS:
+
+```bash
+curl --fail-with-body \
+  -H "Authorization: Bearer TEN_SAM_LOSOWY_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"request_id":"11111111-1111-4111-8111-111111111111","execution_code":"PASSED","audio_ready":true}' \
+  https://PUBLICZNY-LUB-TUNELOWANY-ADRES/internal/ml/completed
+```
+
+Oczekiwany wynik: `{"status":"accepted", ...}`. Nie uruchamiaj produkcyjnego
+testu, dopóki ten request nie przechodzi z węzła WCSS.
+
+Do krótkiego testu można wystawić wyłącznie gateway na porcie 8001 przez
+Cloudflare Quick Tunnel:
+
+```bash
+# osobny terminal na laptopie, po uruchomieniu run_ui.py
+brew install cloudflared
+cloudflared tunnel --url http://127.0.0.1:8001
+```
+
+Skopiuj wygenerowany adres `https://...trycloudflare.com` do `callback.url`.
+Quick Tunnel jest przeznaczony tylko do testów i nie ma gwarancji dostępności;
+do stałego wdrożenia użyj kontrolowanego, stabilnego endpointu HTTPS. Po teście
+zatrzymaj tunel przez `Ctrl+C`.
 
 Najpierw sprawdź z laptopa połączenie i dostęp do katalogu:
 
@@ -202,11 +252,15 @@ Brak SAM Audio nie wpływa na tę ścieżkę. Prompt otwarty, na przykład
 `wyodrębnij dźwięk gitary`, zakończy się błędem do czasu uruchomienia SAM.
 Nie uruchamiaj laptopowego UI z `--demo`, bo ta flaga omija WCSS.
 
+Po uploadzie frontend utrzymuje jeden WebSocket do lokalnego backendu. Nie ma
+pollingu SSH. Dopiero po callbacku backend jednokrotnie pobiera response JSON, a
+dla `PASSED` także finalny WAV.
+
 ## Zweryfikowane wersje
 
 | Komponent | Python | Wersje | Status |
 |---|---:|---|---|
-| Orkiestrator | 3.11 | wymagania `llm_agent/requirements.txt` | testy 8/8 |
+| Orkiestrator i callback | 3.11 | wymagania `llm_agent/requirements.txt` | testy 19/19 |
 | BS-RoFormer | 3.10.4 | torch/torchaudio 2.4.1+cu121 | H100, model załadowany |
 | Demucs | 3.11.5 | torch/torchaudio 2.4.1+cu121, Demucs 4.0.1 | H100, model załadowany |
 | SAM Audio Base | 3.11.5 | torch 2.6, TorchCodec 0.2.1, FFmpeg 6.1 | opcjonalny, w trakcie walidacji |

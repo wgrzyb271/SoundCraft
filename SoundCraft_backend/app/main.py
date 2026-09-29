@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .endpoints import upload_router, result_router
+from .endpoints import completion_router, upload_router, result_router
 from fastapi.middleware.cors import CORSMiddleware
 import os
 app=FastAPI()
@@ -22,4 +22,5 @@ app.add_middleware(
 )
 app.include_router(upload_router)
 app.include_router(result_router)
+app.include_router(completion_router)
 #run:  uvicorn app.main:app --reload

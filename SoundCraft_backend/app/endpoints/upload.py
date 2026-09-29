@@ -1,11 +1,27 @@
 from fastapi import APIRouter, BackgroundTasks, File, Form, UploadFile, HTTPException
 from ..services import transfer_service, is_real_wav, convert_to_wav, save_upload, UploadType
 from ..config import is_demo_mode
+from ..completion import completion_registry
 from uuid import uuid4
 from pathlib import Path
 import json
 
 upload_router = APIRouter()
+
+
+async def _process_demo_and_notify(request_dir: Path, prompt: str) -> None:
+    from llm_agent.orchestrator.demo import process_demo_request
+
+    payload = await process_demo_request(request_dir, prompt)
+    await completion_registry.mark_completed(
+        request_dir.name,
+        {
+            "request_id": request_dir.name,
+            "execution_code": payload.get("execution_code"),
+            "status": payload.get("status"),
+            "audio_ready": bool(payload.get("execution_code") == "PASSED" and payload.get("output_path")),
+        },
+    )
 
 @upload_router.post("/upload")
 async def upload(background_tasks: BackgroundTasks, prompt: str = Form(...), audio: UploadFile = File(...)):
@@ -47,9 +63,7 @@ async def upload(background_tasks: BackgroundTasks, prompt: str = Form(...), aud
         metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
         if demo:
-            from llm_agent.orchestrator.demo import process_demo_request
-
-            background_tasks.add_task(process_demo_request, request_dir, prompt)
+            background_tasks.add_task(_process_demo_and_notify, request_dir, prompt)
         else:
             transfer_service.transfer(wav_path, request_id, UploadType.AUDIO)
             transfer_service.transfer(metadata_path, request_id, UploadType.PROMPT)
