@@ -26,11 +26,15 @@ class RsyncTransfer:
         self.remote_path = remote_path.rstrip("/")
         self.private_key = private_key
         self.port = port
-        control_root = Path(tempfile.gettempdir()) / f"soundcraft-ssh-{os.getuid()}"
+        # macOS limits Unix-domain socket paths to roughly 104 bytes. TMPDIR is
+        # usually already very long, and OpenSSH appends a temporary suffix
+        # while creating the master socket. Keep this path deliberately short.
+        temporary_root = Path("/tmp") if os.name == "posix" else Path(tempfile.gettempdir())
+        control_root = temporary_root / f"sc-ssh-{os.getuid()}"
         control_root.mkdir(mode=0o700, parents=True, exist_ok=True)
         control_root.chmod(0o700)
         identity = f"{host}\0{port}\0{private_key}".encode()
-        self.control_path = control_root / hashlib.sha256(identity).hexdigest()[:24]
+        self.control_path = control_root / hashlib.sha256(identity).hexdigest()[:16]
 
     def _ssh_options(self) -> list[str]:
         options = [

@@ -41,6 +41,22 @@ class TransferFallbackTests(unittest.TestCase):
         sftp.create_request.assert_not_called()
         sftp.list_files.assert_not_called()
 
+    def test_both_transports_failure_starts_cooldown(self):
+        sftp = Mock()
+        ssh = Mock()
+        ssh.create_request.side_effect = RuntimeError("SSH unavailable")
+        sftp.create_request.side_effect = RuntimeError("SFTP unavailable")
+        service = TransferService(ssh, sftp, failure_cooldown_s=60)
+        request_id = str(uuid4())
+
+        with self.assertRaisesRegex(RuntimeError, "retry allowed after 60s"):
+            service.create_request(request_id)
+        with self.assertRaisesRegex(RuntimeError, "cooling down"):
+            service.create_request(request_id)
+
+        ssh.create_request.assert_called_once_with(request_id)
+        sftp.create_request.assert_called_once_with(request_id)
+
     def test_rsync_transport_uses_configured_key_and_port(self):
         transfer = RsyncTransfer(
             "user@ui.wcss.pl", "/home/user/backend_files",
@@ -58,6 +74,9 @@ class TransferFallbackTests(unittest.TestCase):
         self.assertIn("2222", transport)
         self.assertIn("ControlMaster=auto", transport)
         self.assertIn("ControlPersist=600", transport)
+        control_option = next(part for part in transport.split() if part.startswith("ControlPath="))
+        self.assertLess(len(control_option.encode()), 80)
+        self.assertIn("/tmp/sc-ssh-", control_option)
 
 
 if __name__ == "__main__":

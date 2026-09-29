@@ -66,11 +66,8 @@ async def upload_audio(audio: UploadFile = File(...)):
             "filename": audio.filename,
         }
     except Exception:
-        if not is_demo_mode():
-            try:
-                transfer_service.delete_request(request_id)
-            except Exception:
-                pass
+        # Nie próbuj kolejnego połączenia SSH tylko po to, aby posprzątać
+        # niekompletny request. Worker i tak ignoruje katalog bez promptu.
         raise
 
 
@@ -120,9 +117,6 @@ async def upload_prompt(
 
         return {"status": "received", "request_id": request_id, "prompt": prompt}
     except Exception:
-        if not is_demo_mode():
-            try:
-                transfer_service.delete_request(request_id)
-            except Exception:
-                pass
+        # Przy błędzie transportu zachowaj audio na WCSS i nie generuj
+        # dodatkowych prób SSH/SFTP przez automatyczne kasowanie requestu.
         raise
