@@ -112,13 +112,17 @@ class DemoWebSocketTests(unittest.TestCase):
     def test_demo_completes_without_result_polling(self):
         with patch.dict(os.environ, {"SOUNDCRAFT_DEMO": "1"}), TestClient(app) as client:
             upload = client.post(
-                "/upload",
-                data={"prompt": "wyciągnij wokal"},
+                "/upload/audio/",
                 files={"audio": ("test.wav", self._wav(), "audio/wav")},
             )
             self.assertEqual(upload.status_code, 200)
             request_id = upload.json()["request_id"]
             with client.websocket_connect(f"/ws/result/{request_id}") as websocket:
+                prompt = client.post(
+                    f"/upload/{request_id}/prompt",
+                    data={"prompt": "wyciągnij wokal"},
+                )
+                self.assertEqual(prompt.status_code, 200)
                 notice = websocket.receive_json()
             self.assertEqual(notice["status"], "completed")
             result = client.get(f"/result/{request_id}/agent_response")

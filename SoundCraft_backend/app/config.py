@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     sftp_remote_path:str = ""
     sftp_private_key:str = ""
     sftp_port:int=22
-    processing_ttl:int = 60 #in sec
+    processing_ttl:int = 5400 #in sec
     callback_token:str = ""
     completion_wait_timeout:float = 5400.0
 

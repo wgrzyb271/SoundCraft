@@ -1,3 +1,9 @@
+.preview-audio-div{
+    width:100%;
+    display:flex;
+    flex-direction: column;
+    gap:8px;
+}
 .audio-div {
     background-color: rgba(0, 0, 0, 0.223);
     flex: 1;
@@ -66,7 +72,7 @@
 .audio-div .visualizer-wrapper canvas {
     display: block;
     width: 100%;
-    height: 75px;
+    height: 45px;
 }
 
 fieldset{
@@ -102,4 +108,38 @@ padding-top:8px;
   font-weight: 300;
   font-style: normal;
   font-size: 14px;
+}
+
+.current-audio-div {
+    position: relative;
+}
+
+.download-button {
+    position: absolute;
+    top: -6px;
+    right: 10px;
+
+    width: 32px;
+    height: 32px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+
+    cursor: pointer;
+}
+
+.download-button img {
+    width: 30px;
+    height: 30px;
+}
+
+.download-button:hover {
+    background: rgba(255, 255, 255, 0.08);
 }

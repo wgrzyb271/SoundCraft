@@ -1,24 +1,24 @@
-import "./styles/audioView.css";
-import { AudioUploader } from "./uploadAudioView";
-import { AudioPreview } from "./previewAudioView";
+import './styles/audioView.css'
+import { AudioUploader } from './UploadAudioView'
+import { AudioPreview } from './PreviewAudioView'
 
-type AudioViewProps = { 
-    audioFile: File | null;
-    setAudioFile: (file: File | null) => void; 
-    resultAudioFile: File | null;
-    };
+type AudioViewProps = {
+  audioFile: File | null
+  resultAudioFile: File | null
+  onAudioSelected: (file: File) => void
+}
 
-export function AudioView({audioFile, setAudioFile, resultAudioFile}:AudioViewProps) {
-
-    return (
-        <section className="audio-preview-section">
-            {audioFile ? (
-                <>
-                    <AudioPreview originalAudioFile={audioFile} currentChangesAudioFile={resultAudioFile}></AudioPreview>
-                </>
-            ) : (
-                <AudioUploader setAudioFile={setAudioFile} />
-            )}
-        </section>
-    );
+export function AudioView({ audioFile, resultAudioFile, onAudioSelected }: AudioViewProps) {
+  return (
+    <section className="audio-preview-section">
+      {audioFile ? (
+        <AudioPreview
+          originalAudioFile={audioFile}
+          currentChangesAudioFile={resultAudioFile}
+        />
+      ) : (
+        <AudioUploader onAudioSelected={onAudioSelected} />
+      )}
+    </section>
+  )
 }

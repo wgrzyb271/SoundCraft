@@ -162,7 +162,7 @@ backend:
   sftp_remote_path: /home/wojgrz4918/backend_files
   sftp_private_key: /Users/glitch/.ssh/id_ed25519
   sftp_port: 22
-  processing_ttl: 3600
+  processing_ttl: 5400
   callback_token: "TEN_SAM_LOSOWY_TOKEN_CO_NA_WCSS"
   completion_wait_timeout: 5400
 ```

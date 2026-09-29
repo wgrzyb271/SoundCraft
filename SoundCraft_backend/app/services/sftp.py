@@ -17,14 +17,31 @@ class SftpTransfer():
         print(f"port: {self.port}")
 
     def connect(self):
+        print("=== SFTP CONNECT START ===")
+        print(f"host={self.host!r}")
+        print(f"port={self.port!r}")
+        print(f"username={self.username!r}")
+        print(f"private_key={self.private_key!r}")
+
         key = paramiko.Ed25519Key.from_private_key_file(self.private_key)
-       
+        print("KEY OK")
+
         transport = paramiko.Transport((self.host, self.port))
-        transport.connect(username=self.username,pkey=key)
+        print("TRANSPORT OK")
+
+        transport.banner_timeout = 15
+        transport.auth_timeout = 15
+
+        transport.connect(
+            username=self.username,
+            pkey=key
+        )
+        print("AUTH OK")
 
         sftp = paramiko.SFTPClient.from_transport(transport)
+        print("SFTP OK")
 
-        return transport,sftp 
+        return transport, sftp
 
     def mkdir_if_not_exists(self,sftp,path:str):
         try:

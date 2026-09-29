@@ -69,7 +69,7 @@ backend:
   sftp_remote_path: /home/USER/backend_files
   sftp_private_key: /home/local-user/.ssh/id_ed25519
   sftp_port: 22
-  processing_ttl: 3600
+  processing_ttl: 5400
   callback_token: ""
   completion_wait_timeout: 5400
 

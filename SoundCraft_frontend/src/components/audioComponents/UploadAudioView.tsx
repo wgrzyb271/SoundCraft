@@ -3,12 +3,16 @@ import "./styles/uploadAudioView.css";
 import "../../fontStylesheet.css"
 
 type AudioFileProps = {
-    setAudioFile: (file: File | null) => void;
+    onAudioSelected: (file: File) => void;
 };
 
-export function AudioUploader({ setAudioFile }: AudioFileProps) {
+export function AudioUploader({ onAudioSelected }: AudioFileProps) {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setAudioFile(e.target.files?.[0] ?? null);
+        const file = e.target.files?.[0]
+        if(file){
+            onAudioSelected(file)
+            console.log("AUDIO ADDED")
+        }
     };
 
     return (
@@ -25,7 +29,7 @@ export function AudioUploader({ setAudioFile }: AudioFileProps) {
                 </span>
 
                 <span className="manrope-regular audio-upload-description">
-                    here will be supported audio file extensions
+                    Supported audio file extensions are: .mp3, .wav, .flac, .m4a, .mp4, .ogg, .webm
                 </span>
 
                 <span className="manrope-regular audio-upload-button">

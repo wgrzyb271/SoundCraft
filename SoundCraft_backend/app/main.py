@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .endpoints import completion_router, upload_router, result_router
+from .routers import completion_router, result_router, upload_router
 from fastapi.middleware.cors import CORSMiddleware
 import os
 app=FastAPI()
