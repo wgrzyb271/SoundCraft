@@ -16,9 +16,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 
 
-def _require(command: str) -> None:
-    if shutil.which(command) is None:
-        raise SystemExit(f"Missing command: {command}")
+def _resolve_command(command: str) -> str:
+    candidates = [f"{command}.cmd", command] if os.name == "nt" else [command]
+    for candidate in candidates:
+        resolved = shutil.which(candidate)
+        if resolved:
+            return resolved
+    raise SystemExit(f"Missing command: {command}")
 
 
 def _signal_process(process: subprocess.Popen, sig: signal.Signals) -> None:
@@ -27,10 +31,13 @@ def _signal_process(process: subprocess.Popen, sig: signal.Signals) -> None:
     try:
         if os.name == "posix":
             os.killpg(process.pid, sig)
-        elif sig == signal.SIGTERM:
-            process.terminate()
         else:
-            process.kill()
+            # npm uruchamia Vite jako proces potomny. taskkill /T zamyka całe
+            # drzewo, dzięki czemu po Ctrl+C port 5173 nie zostaje zajęty.
+            command = ["taskkill", "/PID", str(process.pid), "/T"]
+            if sig != signal.SIGTERM:
+                command.append("/F")
+            subprocess.run(command, check=False, capture_output=True)
     except ProcessLookupError:
         pass
 
@@ -59,7 +66,7 @@ def _require_free_port(host: str, port: int, option: str) -> None:
         try:
             probe.bind(address)
         except OSError as exc:
-            if exc.errno != errno.EADDRINUSE:
+            if exc.errno not in {errno.EADDRINUSE, 10048} and getattr(exc, "winerror", None) != 10048:
                 raise SystemExit(
                     f"Cannot bind to {host}:{port}: {exc.strerror or exc}."
                 ) from exc
@@ -81,7 +88,7 @@ def main() -> None:
     parser.add_argument("--frontend-port", type=int, default=5173)
     args = parser.parse_args()
 
-    _require("npm")
+    npm = _resolve_command("npm")
     if not args.demo and not args.config.is_file():
         parser.error(f"configuration does not exist: {args.config}")
     _require_free_port(args.backend_host, args.backend_port, "--backend-port")
@@ -108,7 +115,7 @@ def main() -> None:
         "--host", args.backend_host, "--port", str(args.backend_port),
     ]
     frontend = [
-        "npm", "run", "dev", "--", "--host", args.frontend_host,
+        npm, "run", "dev", "--", "--host", args.frontend_host,
         "--port", str(args.frontend_port), "--strictPort",
     ]
     callback_gateway = [
@@ -123,7 +130,11 @@ def main() -> None:
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
     try:
-        process_options = {"env": env, "start_new_session": os.name == "posix"}
+        process_options: dict[str, object] = {"env": env}
+        if os.name == "posix":
+            process_options["start_new_session"] = True
+        else:
+            process_options["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
         processes.append(subprocess.Popen(backend, cwd=ROOT / "SoundCraft_backend", **process_options))
         if not args.demo:
             processes.append(subprocess.Popen(

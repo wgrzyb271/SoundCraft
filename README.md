@@ -9,3 +9,6 @@ Polska instrukcja uruchomienia UI, demo i wdrożenia na WCSS:
 
 Odtworzenie środowisk modeli na WCSS i test produkcyjny bez SAM Audio:
 [WCSS_ODTWORZENIE.md](WCSS_ODTWORZENIE.md).
+
+Uruchomienie frontendu i backendu na Windows z istniejącym kontem WCSS:
+[INSTRUKCJA_WINDOWS.md](INSTRUKCJA_WINDOWS.md).

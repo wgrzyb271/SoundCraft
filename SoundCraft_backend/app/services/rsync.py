@@ -1,6 +1,8 @@
 import hashlib
+import getpass
 import os
 import shlex
+import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -30,11 +32,15 @@ class RsyncTransfer:
         # usually already very long, and OpenSSH appends a temporary suffix
         # while creating the master socket. Keep this path deliberately short.
         temporary_root = Path("/tmp") if os.name == "posix" else Path(tempfile.gettempdir())
-        control_root = temporary_root / f"sc-ssh-{os.getuid()}"
+        get_user_id = getattr(os, "getuid", None)
+        user_id = str(get_user_id()) if callable(get_user_id) else getpass.getuser()
+        safe_user_id = "".join(character for character in user_id if character.isalnum()) or "user"
+        control_root = temporary_root / f"sc-ssh-{safe_user_id}"
         control_root.mkdir(mode=0o700, parents=True, exist_ok=True)
         control_root.chmod(0o700)
         identity = f"{host}\0{port}\0{private_key}".encode()
         self.control_path = control_root / hashlib.sha256(identity).hexdigest()[:16]
+        self.available = bool(shutil.which("ssh") and shutil.which("rsync"))
 
     def _ssh_options(self) -> list[str]:
         options = [

@@ -21,6 +21,7 @@ class TransferService:
         self.sftp=sftp_transfer
         self.failure_cooldown_s = failure_cooldown_s
         self._unavailable_until = 0.0
+        self.rsync_available = getattr(rsync_transfer, "available", True) is not False
 
     def _sftp_fallback(self, operation: str, error: Exception):
         print(f"SSH/rsync {operation} failed, trying SFTP fallback: {error}")
@@ -34,6 +35,15 @@ class TransferService:
 
     def _run_with_fallback(self, operation, primary, fallback):
         self._ensure_available()
+        if not self.rsync_available:
+            try:
+                return fallback()
+            except Exception as fallback_error:
+                self._unavailable_until = time.monotonic() + self.failure_cooldown_s
+                raise RuntimeError(
+                    f"SFTP failed for {operation}; retry allowed after "
+                    f"{self.failure_cooldown_s:.0f}s"
+                ) from fallback_error
         try:
             return primary()
         except Exception as primary_error:

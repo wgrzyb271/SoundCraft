@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 from uuid import uuid4
 
 from SoundCraft_backend.app.services.rsync import RsyncTransfer
+from SoundCraft_backend.app.services import rsync as rsync_module
 from SoundCraft_backend.app.services.transfer import ResultType, TransferService
 
 
@@ -56,6 +57,43 @@ class TransferFallbackTests(unittest.TestCase):
 
         ssh.create_request.assert_called_once_with(request_id)
         sftp.create_request.assert_called_once_with(request_id)
+
+    def test_missing_rsync_uses_sftp_without_trying_primary_transport(self):
+        sftp = Mock()
+        ssh = Mock()
+        ssh.available = False
+        service = TransferService(ssh, sftp)
+        request_id = str(uuid4())
+
+        service.create_request(request_id)
+
+        ssh.create_request.assert_not_called()
+        sftp.create_request.assert_called_once_with(request_id)
+
+    def test_missing_rsync_still_applies_failure_cooldown(self):
+        sftp = Mock()
+        sftp.create_request.side_effect = RuntimeError("SFTP unavailable")
+        ssh = Mock()
+        ssh.available = False
+        service = TransferService(ssh, sftp, failure_cooldown_s=60)
+        request_id = str(uuid4())
+
+        with self.assertRaisesRegex(RuntimeError, "SFTP failed.*retry allowed after 60s"):
+            service.create_request(request_id)
+        with self.assertRaisesRegex(RuntimeError, "cooling down"):
+            service.create_request(request_id)
+
+        sftp.create_request.assert_called_once_with(request_id)
+
+    def test_rsync_transport_initializes_without_posix_getuid(self):
+        with (
+            patch.object(rsync_module.os, "getuid", None),
+            patch.object(rsync_module.getpass, "getuser", return_value="Windows User"),
+            patch.object(rsync_module.tempfile, "gettempdir", return_value=tempfile.gettempdir()),
+        ):
+            transfer = RsyncTransfer("user@ui.wcss.pl", "/home/user/backend_files")
+
+        self.assertIn("sc-ssh-WindowsUser", str(transfer.control_path))
 
     def test_rsync_transport_uses_configured_key_and_port(self):
         transfer = RsyncTransfer(

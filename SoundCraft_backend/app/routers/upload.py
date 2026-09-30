@@ -34,7 +34,7 @@ async def _process_demo_and_notify(request_dir: Path, prompt: str) -> None:
 @upload_router.post("/upload/audio/")
 async def upload_audio(audio: UploadFile = File(...)):
     request_id = str(uuid4())
-    request_dir = Path(f"/tmp/agent_requests/{request_id}")
+    request_dir = Path(settings.local_request_root) / request_id
     request_dir.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -84,7 +84,7 @@ async def upload_prompt(
     if not prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt cannot be empty")
 
-    request_dir = Path(f"/tmp/agent_requests/{request_id}")
+    request_dir = Path(settings.local_request_root) / request_id
     if not request_dir.is_dir():
         raise HTTPException(status_code=404, detail="Request does not exist")
 

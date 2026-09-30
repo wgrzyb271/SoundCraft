@@ -1,4 +1,5 @@
 import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,7 @@ class Settings(BaseSettings):
     processing_ttl:int = 5400 #in sec
     callback_token:str = ""
     completion_wait_timeout:float = 5400.0
+    local_request_root:str = str(Path(tempfile.gettempdir()) / "soundcraft-agent-requests")
 
     model_config = SettingsConfigDict(
         env_file=(".env",".config"),

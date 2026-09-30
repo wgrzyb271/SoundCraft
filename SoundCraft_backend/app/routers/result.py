@@ -6,12 +6,12 @@ from fastapi.responses import FileResponse
 from datetime import datetime,timezone
 from uuid import UUID
 import shutil
-from ..config import is_demo_mode
+from ..config import is_demo_mode, settings
 
 result_router = APIRouter()
 
 def get_request_dir(request_id:str)->Path:
-    return Path(f"/tmp/agent_requests/{request_id}")
+    return Path(settings.local_request_root) / request_id
 
 def is_expired(request_id:str)->bool:
     request_dir = get_request_dir(request_id)
