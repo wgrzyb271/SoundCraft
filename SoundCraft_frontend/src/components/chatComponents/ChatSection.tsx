@@ -52,19 +52,16 @@ export function ChatSection({onPromptSubmit, agentResponse}:ChatSectionProps){
         if(!message){
             return
         }
-
-        const success = await onPromptSubmit(message)
-        if(success){
-            setMessages(prev => [
+    
+        setMessages(prev => [
             ...prev,
             {sender:"user",
             messageValue:userMassage
-            }
-        ])
-
-        }
+            }])
 
         setUserMassage('')
+        await onPromptSubmit(message)
+
      }
     return (
         <>
