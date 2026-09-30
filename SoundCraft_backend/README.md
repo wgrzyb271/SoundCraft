@@ -1,5 +1,8 @@
 # SoundCraft Backend
 
+Opis zmian wykonanych podczas integracji z WCSS znajduje się w
+[README_ZMIANY.md](README_ZMIANY.md).
+
 Backend API aplikacji **SoundCraft** odpowiedzialny za przyjmowanie plików audio, przesyłanie ich na serwer HPC oraz pobieranie wyników wygenerowanych przez agenta.
 
 Backend wykorzystuje **FastAPI**, **FFmpeg** oraz **SFTP** i **rsync** jako backup.
