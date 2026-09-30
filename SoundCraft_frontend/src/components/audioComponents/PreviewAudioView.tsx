@@ -20,28 +20,30 @@ export function AudioPreview({
 
     useEffect(() => {
         if (!originalAudioFile) {
-            setOriginalAudioUrl(null);
-            return;
+            const timer = window.setTimeout(() => setOriginalAudioUrl(null), 0);
+            return () => window.clearTimeout(timer);
         }
 
         const url = URL.createObjectURL(originalAudioFile);
-        setOriginalAudioUrl(url);
+        const timer = window.setTimeout(() => setOriginalAudioUrl(url), 0);
 
         return () => {
+            window.clearTimeout(timer);
             URL.revokeObjectURL(url);
         };
     }, [originalAudioFile]);
 
     useEffect(() => {
         if (!currentChangesAudioFile) {
-            setCurrentChangesUrl(null);
-            return;
+            const timer = window.setTimeout(() => setCurrentChangesUrl(null), 0);
+            return () => window.clearTimeout(timer);
         }
 
         const url = URL.createObjectURL(currentChangesAudioFile);
-        setCurrentChangesUrl(url);
+        const timer = window.setTimeout(() => setCurrentChangesUrl(url), 0);
 
         return () => {
+            window.clearTimeout(timer);
             URL.revokeObjectURL(url);
         };
     }, [currentChangesAudioFile]);
