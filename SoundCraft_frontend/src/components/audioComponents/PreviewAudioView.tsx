@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { AudioVisualizer } from "react-audio-visualize";
 import AudioPlayer from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
@@ -15,26 +15,36 @@ export function AudioPreview({
     originalAudioFile,
     currentChangesAudioFile,
 }: AudioPreviewProps) {
-    const originalAudioUrl = useMemo(
-        () => originalAudioFile ? URL.createObjectURL(originalAudioFile) : null,
-        [originalAudioFile],
-    );
-    const currentChangesUrl = useMemo(
-        () => currentChangesAudioFile ? URL.createObjectURL(currentChangesAudioFile) : null,
-        [currentChangesAudioFile],
-    );
+    const [originalAudioUrl, setOriginalAudioUrl] = useState<string | null>(null);
+    const [currentChangesUrl, setCurrentChangesUrl] = useState<string | null>(null);
 
     useEffect(() => {
+        if (!originalAudioFile) {
+            setOriginalAudioUrl(null);
+            return;
+        }
+
+        const url = URL.createObjectURL(originalAudioFile);
+        setOriginalAudioUrl(url);
+
         return () => {
-            if (originalAudioUrl) URL.revokeObjectURL(originalAudioUrl);
+            URL.revokeObjectURL(url);
         };
-    }, [originalAudioUrl]);
+    }, [originalAudioFile]);
 
     useEffect(() => {
+        if (!currentChangesAudioFile) {
+            setCurrentChangesUrl(null);
+            return;
+        }
+
+        const url = URL.createObjectURL(currentChangesAudioFile);
+        setCurrentChangesUrl(url);
+
         return () => {
-            if (currentChangesUrl) URL.revokeObjectURL(currentChangesUrl);
+            URL.revokeObjectURL(url);
         };
-    }, [currentChangesUrl]);
+    }, [currentChangesAudioFile]);
 
     const handleDownload = () => {
     if (!currentChangesAudioFile) return;
