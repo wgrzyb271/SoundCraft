@@ -2,23 +2,17 @@
 
 **SoundCraft** is a multi-agent AI system for audio source separation, mixing and post-processing controlled with natural language.
 
-The system uses a single **DeepSeek LLM** as the reasoning engine of the orchestrator. DeepSeek interprets the user's request, classifies the task and coordinates specialized audio-processing agents.
-
-The audio agents are **not separate LLMs**. They are specialized workers responsible for executing audio models, monitoring their jobs and returning structured results to the orchestrator.
+A single **DeepSeek LLM** powers the LangGraph orchestrator, which interprets user requests and delegates audio-processing tasks to specialized model agents.
 
 SoundCraft combines:
 
 - **DeepSeek** — single reasoning LLM
 - **LangGraph** — multi-agent orchestration
 - **custom genetic-algorithm-inspired model ranking**
-- **BS-RoFormer**
-- **Demucs**
-- automatic model routing and fallback
-- **mixAgent**
-- **Pedalboard / DSP**
-- **PostProcessing**
-- **FastAPI**
-- **React / Vite**
+- **BS-RoFormer** and **Demucs**
+- automatic routing and fallback
+- **mixAgent**, **Pedalboard / DSP** and **PostProcessing**
+- **FastAPI** + **React / Vite**
 - **WCSS / Slurm** GPU execution
 
 ---
@@ -27,31 +21,17 @@ SoundCraft combines:
 
 ### Upload audio
 
-Upload an audio file directly through the web interface.
-
 ![SoundCraft upload interface](screenshots/view_1.png)
-
----
 
 ### Audio workspace
 
-After uploading a file, SoundCraft displays the original waveform and opens the natural-language control interface.
-
 ![SoundCraft audio workspace](screenshots/view_2.png)
 
----
-
-### AI-controlled audio processing
-
-The user describes the desired result in the chat interface.
-
-SoundCraft interprets the request, selects the processing path, executes the audio pipeline and returns the processed file.
+### Processed audio
 
 ![SoundCraft processed audio](screenshots/view_3.png)
 
----
-
-## 💬 Example commands
+Example commands:
 
 ```text
 isolate the vocals
@@ -59,7 +39,7 @@ extract the guitar
 make the vocals louder
 ```
 
-Commands can also be provided in Polish:
+Polish commands are supported as well:
 
 ```text
 wyciągnij wokal
@@ -71,92 +51,53 @@ zrób wokal głośniej
 
 ## 🧠 Architecture
 
-SoundCraft uses **one DeepSeek LLM** for natural-language interpretation and orchestration.
-
-The multi-agent architecture consists of a central LangGraph orchestrator and specialized model workers.
+SoundCraft uses **one DeepSeek LLM**. The audio agents are specialized workers, not separate language models.
 
 ```mermaid
 flowchart TD
-    U["👤 User"] --> FE["SoundCraft Frontend<br/>React + Vite"]
-
-    FE --> BE["SoundCraft Backend<br/>FastAPI"]
+    U["👤 User"] --> FE["Frontend<br/>React + Vite"]
+    FE --> BE["Backend<br/>FastAPI"]
 
     BE --> ORCH["LangGraph Orchestrator"]
 
     DS["DeepSeek<br/>Single LLM"] --> ORCH
-
     RANK["Custom model ranking<br/>Genetic-algorithm-inspired"] --> ORCH
 
-    ORCH -->|"routing"| BS["BS-RoFormer Agent"]
-    ORCH -->|"routing / fallback"| DM["Demucs Agent"]
-
-    BS --> MIX["mixAgent<br/>Mixing + Effects"]
-    DM --> MIX
-
-    MIX --> DSP["Pedalboard / DSP"]
-
-    DSP --> PP["PostProcessing"]
-
-    PP --> OUT["🎵 Final WAV"]
-
-    OUT --> BE
-    BE --> FE
-```
-
-The orchestrator is responsible for high-level decisions.
-
-The audio agents are responsible for model-specific execution.
-
----
-
-## 🔄 Processing pipeline
-
-A typical SoundCraft request follows this path:
-
-```mermaid
-flowchart TD
-    A["Audio file + natural-language prompt"]
-
-    A --> B["Frontend<br/>React / Vite"]
-
-    B --> C["Backend<br/>FastAPI"]
-
-    C --> D["LangGraph Orchestrator"]
-
-    E["DeepSeek"] --> D
-
-    D --> F["Task classification"]
-
-    F --> G["Capability filtering"]
-
-    G --> H["Model ranking"]
-
-    H --> I["Agent selection"]
-
-    I --> BS["BS-RoFormer"]
-    I --> DM["Demucs"]
+    ORCH --> BS["BS-RoFormer Agent"]
+    ORCH --> DM["Demucs Agent"]
 
     BS --> MIX["mixAgent"]
     DM --> MIX
 
     MIX --> DSP["Pedalboard / DSP"]
-
     DSP --> PP["PostProcessing"]
 
-    PP --> WAV["Final WAV"]
+    PP --> OUT["🎵 Final WAV"]
+    OUT --> BE
+    BE --> FE
 ```
+
+### Main components
+
+| Component | Description |
+|---|---|
+| `SoundCraft_frontend` | React/Vite web interface |
+| `SoundCraft_backend` | FastAPI backend |
+| `llm_agent` | LangGraph orchestrator powered by DeepSeek |
+| `agent_bs_roformer` | BS-RoFormer execution agent |
+| `demucs` | Demucs source-separation integration |
+| `mixAgent` | Mixing and audio effects |
+| `PostProcessing` | Final audio-processing stage |
 
 ---
 
-## 🤖 Multi-agent design
+## 🤖 Multi-agent workflow
 
-SoundCraft is a multi-agent system even though it uses only **one language model**.
+The orchestrator interprets the request, selects a compatible model and receives a structured result from its agent.
 
 ```mermaid
 flowchart LR
-    DS["DeepSeek LLM"]
-
-    DS --> O["LangGraph<br/>Orchestrator"]
+    DS["DeepSeek LLM"] --> O["LangGraph<br/>Orchestrator"]
 
     O -->|"delegate"| A1["BS-RoFormer Agent"]
     O -->|"delegate"| A2["Demucs Agent"]
@@ -165,322 +106,133 @@ flowchart LR
     A2 -->|"SUCCESS / FAILED"| O
 ```
 
-### Orchestrator
+The orchestrator handles:
 
-The DeepSeek-powered orchestrator is responsible for:
+- task classification,
+- agent selection,
+- model ranking,
+- failure handling,
+- fallback selection.
 
-- interpreting the user's request,
-- classifying the requested operation,
-- checking which models are capable of performing the task,
-- reading the model ranking,
-- selecting an appropriate audio-processing agent,
-- tracking previous attempts,
-- handling failures,
-- selecting another compatible model when necessary,
-- coordinating the complete processing pipeline.
-
-### Audio agents
-
-Each model-specific agent is responsible for:
-
-- handling one audio-processing model,
-- validating whether the requested task is supported,
-- preparing model execution,
-- submitting computation,
-- monitoring execution,
-- reading the generated output,
-- returning a structured `SUCCESS` or `FAILED` report.
-
-This separates **reasoning and orchestration** from **model-specific execution**.
+Agents handle model-specific execution and return `SUCCESS` or `FAILED`.
 
 ---
 
-# 🧬 Custom genetic-algorithm-inspired model ranking
+## 🧬 Custom genetic-algorithm-inspired ranking
 
-SoundCraft includes a **custom model-selection algorithm inspired by genetic algorithms**.
+SoundCraft uses a **custom model-selection mechanism inspired by genetic algorithms**.
 
-Instead of hardcoding a fixed priority such as:
-
-```text
-Model A > Model B > Model C
-```
-
-the system derives the model hierarchy from performance data.
-
-Each audio model is treated similarly to an **individual in a population**, while its benchmark performance determines its **fitness**.
+Instead of hardcoding model priority, models are ranked using benchmark-derived fitness values.
 
 ```mermaid
 flowchart TD
-    DATA["Existing benchmark results"]
-
-    DATA --> METRICS["Metrics per model<br/>and audio category"]
-
-    METRICS --> NORM["Normalize metrics"]
-
+    DATA["Benchmark results"]
+    DATA --> NORM["Normalize metrics"]
     NORM --> FITNESS["Calculate fitness<br/>F(model, task)"]
+    FITNESS --> FILTER["Filter compatible models"]
+    FILTER --> RANK["Rank models"]
+    RANK --> BEST["Select best candidate"]
 
-    FITNESS --> FILTER["Filter models<br/>by capability"]
-
-    FILTER --> RANK["Rank compatible models"]
-
-    RANK --> BEST["Select highest-ranked model"]
-
-    BEST --> AGENT["Delegate task to agent"]
-
-    AGENT --> RESULT{"Agent result"}
+    BEST --> AGENT["Execute agent"]
+    AGENT --> RESULT{"Result"}
 
     RESULT -->|"SUCCESS"| DONE["Continue pipeline"]
-
-    RESULT -->|"FAILED"| NEXT["Select next model<br/>in ranking"]
-
+    RESULT -->|"FAILED"| NEXT["Next ranked model"]
     NEXT --> AGENT
 ```
-
-## Genetic-algorithm mapping
 
 | Genetic algorithm concept | SoundCraft |
 |---|---|
 | Population | Available audio models |
-| Individual | Audio model together with its execution agent |
-| Fitness function | Performance calculated from benchmark metrics |
+| Individual | Model + execution agent |
+| Fitness | Benchmark-derived performance |
 | Ranking selection | Models ordered by fitness |
-| Elitism | Highest-ranked compatible model receives the task first |
-| Elimination | Models unable to perform the requested task are filtered out |
-| Selection after failure | Next compatible model in the ranking |
+| Elitism | Best compatible model selected first |
+| Elimination | Unsupported models filtered out |
 | New generation | Ranking recalculated when model data changes |
 
-A generalized fitness function can be represented as:
+The generalized fitness function is:
 
 ```text
 F(m, s) = Σ wk · normk(m, s)
 ```
 
-where:
+where `m` is a model, `s` is a task or stem, `normk` is a normalized metric and `wk` is its weight.
 
-- `m` — audio model,
-- `s` — stem or task category,
-- `k` — evaluation metric,
-- `normk` — normalized value of metric `k`,
-- `wk` — weight assigned to metric `k`.
-
-The ranking can be calculated separately for different audio tasks.
-
-This means that one model can rank highest for one type of source while another model can rank higher for another task.
-
----
-
-## Deterministic ranking selection
-
-Unlike a classical genetic algorithm, SoundCraft does not randomly select an individual.
-
-The highest-ranked compatible model receives the request first.
-
-```mermaid
-flowchart TD
-    PROMPT["User request"]
-
-    PROMPT --> CLASS["DeepSeek<br/>Task classification"]
-
-    CLASS --> FILTER["Filter models<br/>by capability"]
-
-    FILTER --> DATA["Read benchmark data"]
-
-    DATA --> FITNESS["Calculate fitness"]
-
-    FITNESS --> ORDER["Create ranking"]
-
-    ORDER --> M1["#1 Best candidate"]
-
-    M1 --> RUN["Execute agent"]
-
-    RUN --> STATUS{"SUCCESS?"}
-
-    STATUS -->|"Yes"| OK["Accept result"]
-
-    STATUS -->|"No"| M2["Next model<br/>in ranking"]
-
-    M2 --> RUN
-```
-
-The mechanism is therefore:
-
-- **data-driven**
-- **deterministic**
-- **reproducible**
-- **independent of manually hardcoded model priority**
-
-The LLM does not calculate the numerical fitness itself.
-
-Fitness values and ranking are calculated by application logic from benchmark data. The orchestrator uses the resulting ranking when deciding which agent should receive the task.
-
----
-
-## Why genetic-algorithm-inspired?
-
-The algorithm borrows several concepts from genetic algorithms:
-
-- population,
-- individuals,
-- fitness,
-- ranking selection,
-- elitism,
-- elimination,
-- generations.
-
-However, SoundCraft intentionally does **not** use crossover or mutation.
-
-The audio models themselves do not evolve.
-
-Instead, the **model hierarchy evolves when the available models, benchmark results or fitness parameters change**.
+Unlike a classical genetic algorithm, the mechanism is **deterministic** and does not use crossover or mutation. The models do not evolve — their **ranking does** when benchmark data changes.
 
 ```mermaid
 flowchart LR
     G1["Generation N<br/>Models + benchmark data"]
-
-    G1 --> F1["Fitness calculation"]
-
-    F1 --> R1["Model ranking"]
-
+    G1 --> F1["Fitness"]
+    F1 --> R1["Ranking"]
     R1 --> S1["Production selection"]
 
-    NEW["New model or<br/>updated benchmark data"]
-
+    NEW["New model or<br/>updated results"]
     NEW --> G2["Generation N+1"]
-
     G2 --> F2["Recalculate fitness"]
-
     F2 --> R2["Updated ranking"]
-
-    R2 --> S2["Updated production selection"]
+    R2 --> S2["Updated selection"]
 ```
-
-This makes it possible to add new audio models without rewriting the orchestration logic.
-
-A new model only needs:
-
-1. an execution agent,
-2. capability information,
-3. benchmark results used by the ranking algorithm.
 
 ---
 
-# 🔁 Routing and fallback
+## 🔁 Routing and fallback
 
-When the selected model cannot complete a task, the orchestrator can move to the next compatible model in the ranking.
+If the selected model fails, SoundCraft moves to the next compatible model in the ranking.
 
 ```mermaid
 flowchart TD
     P["User prompt"]
-
-    P --> C["DeepSeek<br/>Classify task"]
+    P --> C["DeepSeek<br/>Task classification"]
 
     C --> R["Read model ranking"]
-
-    R --> A["Select highest-ranked<br/>compatible agent"]
+    R --> A["Select best compatible agent"]
 
     A --> RUN["Execute agent"]
-
     RUN --> Q{"Result?"}
 
     Q -->|"SUCCESS"| MIX["mixAgent"]
+    Q -->|"FAILED"| F{"Fallback available?"}
 
-    Q -->|"FAILED"| F{"Another compatible<br/>candidate?"}
-
-    F -->|"Yes"| NEXT["Select next model<br/>in ranking"]
-
+    F -->|"Yes"| NEXT["Next ranked model"]
     NEXT --> RUN
 
-    F -->|"No"| ERR["Return failure information"]
+    F -->|"No"| ERR["Return failure"]
 
     MIX --> DSP["Pedalboard / DSP"]
-
     DSP --> PP["PostProcessing"]
-
     PP --> OUT["Final WAV"]
 ```
 
-The orchestrator keeps track of previous attempts so that the same failed candidate is not repeatedly selected without a meaningful change.
-
 ---
 
-# 🧩 Project components
+## 🎚️ Audio processing
 
-| Component | Description |
-|---|---|
-| `SoundCraft_frontend` | React/Vite web interface |
-| `SoundCraft_backend` | FastAPI backend responsible for uploads and result handling |
-| `llm_agent` | LangGraph orchestrator powered by a single DeepSeek LLM |
-| `agent_bs_roformer` | Specialized BS-RoFormer execution agent |
-| `demucs` | Demucs source-separation integration |
-| `mixAgent` | Audio mixing and effect processing |
-| `PostProcessing` | Final audio-processing stage |
-| `scripts` | Helper and WCSS execution scripts |
-| `screenshots` | Images displayed in this README |
+The active audio pipeline uses:
 
----
-
-# 🎚️ Audio processing
-
-## BS-RoFormer
-
-BS-RoFormer is one of the source-separation models used by SoundCraft.
-
-It is executed through a dedicated agent responsible for model-specific execution and reporting.
-
----
-
-## Demucs
-
-Demucs provides an additional source-separation path.
-
-Depending on the task and model ranking, the orchestrator can select Demucs as the processing model or use it as a fallback candidate.
-
----
-
-## mixAgent
-
-After source separation, the resulting tracks are passed to `mixAgent`.
-
-It is responsible for operations such as:
-
-- volume changes,
-- track recombination,
-- requested mixing operations,
-- audio effects,
-- preparation for final processing.
-
----
-
-## Pedalboard / DSP
-
-Audio effects and signal-processing operations are handled with DSP processing and Pedalboard.
+- **BS-RoFormer**
+- **Demucs**
+- **mixAgent**
+- **Pedalboard / DSP**
+- **PostProcessing**
 
 ```mermaid
 flowchart LR
     SEP["Separated audio"]
-
     SEP --> MIX["mixAgent"]
-
     MIX --> DSP["Pedalboard / DSP"]
-
     DSP --> POST["PostProcessing"]
-
     POST --> WAV["Final WAV"]
 ```
 
----
-
-## PostProcessing
-
-`PostProcessing` is the final processing stage before the result is returned to the user.
+> **SAM Audio is currently excluded from the active processing pipeline.**
 
 ---
 
-# 🚀 Local demo
+## 🚀 Local demo
 
-SoundCraft includes a local demo that can be executed without WCSS or a local GPU.
-
-From the repository root:
+The local demo runs without WCSS or a GPU.
 
 ```bash
 python3 -m venv .venv-ui
@@ -501,121 +253,68 @@ Open:
 http://127.0.0.1:5173
 ```
 
-Example commands:
-
-```text
-wyciągnij wokal
-wyodrębnij dźwięk gitary
-zrób wokal głośniej
-```
-
-In demo mode, GPU-heavy model execution is simulated, while the actual application infrastructure remains active:
-
-- HTTP upload,
-- orchestrator,
-- routing,
-- fallback handling,
-- `mixAgent`,
-- Pedalboard,
-- `PostProcessing`,
-- local WebSocket notification,
-- final WAV download.
+In demo mode, GPU-heavy execution is simulated while the application pipeline remains active:
 
 ```mermaid
 flowchart TD
-    U["Audio upload"]
-
-    U --> O["LangGraph Orchestrator"]
+    U["Audio upload"] --> O["LangGraph Orchestrator"]
 
     D["DeepSeek"] --> O
 
     O --> R["Routing / fallback"]
-
     R --> SIM["Simulated GPU agent"]
 
     SIM --> MIX["mixAgent"]
-
     MIX --> DSP["Pedalboard / DSP"]
-
     DSP --> PP["PostProcessing"]
 
     PP --> WS["WebSocket notification"]
-
     WS --> WAV["Final WAV download"]
 ```
 
-Press:
-
-```text
-Ctrl+C
-```
-
-to stop the local processes.
+Press `Ctrl+C` to stop the local processes.
 
 ---
 
-# 🔐 Configuration
+## 🔐 Configuration
 
-Create a private configuration file:
+Create a private configuration:
 
 ```bash
 cp llm_agent/config.yaml llm_agent/config.local.yaml
 chmod 600 llm_agent/config.local.yaml
 ```
 
-Edit:
+Configure:
 
-```text
-llm_agent/config.local.yaml
-```
-
-The configuration contains settings for:
-
-- DeepSeek API access,
-- WCSS request directory,
-- Slurm account,
-- QoS,
-- GPU partition,
-- BS-RoFormer environment,
-- model configuration,
-- model checkpoints,
+- DeepSeek API key,
+- WCSS paths,
+- Slurm account / QoS / partition,
+- BS-RoFormer paths and checkpoint,
 - Demucs environment,
-- SFTP / rsync backend,
+- SFTP / rsync,
 - SSH authentication,
-- callback URL,
-- callback authentication token.
+- callback URL and token.
 
-Important path dependency:
+The request paths must point to the same WCSS directory:
 
 ```text
 paths.request_root == backend.sftp_remote_path == backend.rsync_remote_path
 ```
 
-`config.local.yaml` is ignored by Git.
-
-Environment variables take precedence over YAML configuration.
-
-> **Never commit API keys, SSH private keys, callback tokens or private WCSS credentials.**
+> Never commit API keys, SSH keys or authentication tokens.
 
 ---
 
-# 🖥️ WCSS setup
-
-Clone the repository on WCSS:
+## 🖥️ WCSS setup
 
 ```bash
 cd /home/USER
 
 git clone REPOSITORY_URL SoundCraft
-
 cd SoundCraft
-```
 
-Create the orchestrator environment:
-
-```bash
 python3 -m venv .venv-orchestrator
-
 source .venv-orchestrator/bin/activate
 
 python -m pip install -r llm_agent/requirements.txt
@@ -628,37 +327,15 @@ scp llm_agent/config.local.yaml \
   USER@ui.wcss.pl:/home/USER/SoundCraft/llm_agent/config.local.yaml
 ```
 
-Restrict access to the configuration:
-
-```bash
-ssh USER@ui.wcss.pl \
-  chmod 600 /home/USER/SoundCraft/llm_agent/config.local.yaml
-```
-
-Update environment-specific paths inside the configuration.
-
----
-
-# 🎤 BS-RoFormer setup
-
-The BS-RoFormer configuration must point to:
-
-- model repository,
-- model YAML configuration,
-- checkpoint,
-- Python environment.
-
-Install the required dependencies:
+### BS-RoFormer
 
 ```bash
 python -m pip install -r agent_bs_roformer/requirements-agent.txt
 ```
 
----
+Configure the model repository, YAML configuration, checkpoint and Python environment.
 
-# 🎼 Demucs setup
-
-Create a separate execution environment:
+### Demucs
 
 ```bash
 python3.11 -m venv /home/USER/venvs/demucs
@@ -668,13 +345,11 @@ source /home/USER/venvs/demucs/bin/activate
 python -m pip install -r demucs/requirements.txt
 ```
 
-Set the corresponding interpreter path in the private configuration.
-
 ---
 
-# ⚙️ Running the WCSS worker
+## ⚙️ WCSS worker
 
-On WCSS:
+Start the worker with:
 
 ```bash
 cd /home/USER/SoundCraft
@@ -682,50 +357,34 @@ cd /home/USER/SoundCraft
 ./scripts/submit_wcss_worker.sh
 ```
 
-The worker observes the configured request directory and handles incoming jobs.
-
 ```mermaid
 flowchart TD
-    A["New request"]
-
-    A --> B["WCSS Worker"]
+    A["New request"] --> B["WCSS Worker"]
 
     B --> C["LangGraph Orchestrator"]
 
     D["DeepSeek"] --> C
-
     E["Model ranking"] --> C
 
     C --> F["Select audio agent"]
 
     F --> G["Submit Slurm job"]
-
     G --> H["GPU execution"]
-
     H --> I["Agent result"]
 
     I --> J{"SUCCESS?"}
 
     J -->|"Yes"| MIX["mixAgent"]
-
     J -->|"No"| FB["Next ranked candidate"]
 
     FB --> F
 
     MIX --> DSP["Pedalboard / DSP"]
-
     DSP --> POST["PostProcessing"]
-
-    POST --> K["Publish final result"]
+    POST --> K["Publish result"]
 ```
 
-The worker itself runs as a lightweight CPU job rather than as a permanent process on the WCSS login node.
-
----
-
-## Test a single request
-
-An existing request can be executed manually:
+Test one existing request:
 
 ```bash
 python -m llm_agent.orchestrator.wcss_request \
@@ -735,9 +394,7 @@ python -m llm_agent.orchestrator.wcss_request \
 
 ---
 
-# 🌐 Running the UI with WCSS
-
-On a computer with SSH access to WCSS:
+## 🌐 UI connected to WCSS
 
 ```bash
 cd SoundCraft
@@ -754,30 +411,13 @@ cd ..
 python run_ui.py --config llm_agent/config.local.yaml
 ```
 
-The launcher starts:
-
 | Service | Address |
 |---|---|
-| FastAPI backend | `http://127.0.0.1:8000` |
+| Backend | `http://127.0.0.1:8000` |
 | Callback gateway | `http://127.0.0.1:8001` |
-| Web UI | `http://127.0.0.1:5173` |
+| UI | `http://127.0.0.1:5173` |
 
-The callback gateway exposes only:
-
-```text
-/health
-/internal/ml/completed
-```
-
-It does not expose audio uploads or result downloads.
-
-The UI waits locally for processing completion through WebSocket instead of polling WCSS.
-
----
-
-## Custom ports
-
-If one of the default ports is occupied:
+Custom ports:
 
 ```bash
 python run_ui.py \
@@ -786,13 +426,9 @@ python run_ui.py \
   --frontend-port 5180
 ```
 
-The launcher does not automatically switch ports, ensuring that the frontend always communicates with the intended backend instance.
-
 ---
 
-# 🌐 Production architecture
-
-The production architecture separates the local user-facing application from computation performed on WCSS.
+## 🌐 Production architecture
 
 ```mermaid
 flowchart TD
@@ -808,29 +444,30 @@ flowchart TD
     subgraph WCSS["WCSS"]
         REQ["Request directory"]
         WORKER["WCSS Worker"]
+
         ORCH["LangGraph Orchestrator"]
         DEEP["DeepSeek"]
         RANK["Genetic-algorithm-inspired<br/>model ranking"]
+
         BS["BS-RoFormer Agent"]
         DEM["Demucs Agent"]
+
         SLURM["Slurm GPU Job"]
+
         MIX["mixAgent"]
         DSP["Pedalboard / DSP"]
         POST["PostProcessing"]
     end
 
     USER --> FE
-
     FE --> BE
 
     BE -->|"SFTP / rsync"| REQ
 
     REQ --> WORKER
-
     WORKER --> ORCH
 
     DEEP --> ORCH
-
     RANK --> ORCH
 
     ORCH --> BS
@@ -840,155 +477,67 @@ flowchart TD
     DEM --> SLURM
 
     SLURM --> MIX
-
     MIX --> DSP
-
     DSP --> POST
 
     POST -->|"callback"| GW
 
     GW --> BE
-
     BE --> WS
-
     WS --> FE
 ```
 
 ---
 
-# 🔄 Production request flow
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant F as Frontend
-    participant B as FastAPI Backend
-    participant W as WCSS Worker
-    participant O as LangGraph Orchestrator
-    participant D as DeepSeek
-    participant A as Audio Agent
-    participant S as Slurm
-    participant M as mixAgent
-    participant P as PostProcessing
-
-    U->>F: Upload audio + prompt
-
-    F->>B: HTTP request
-
-    B->>W: Transfer request to WCSS
-
-    W->>O: New task
-
-    O->>D: Interpret and classify prompt
-
-    D-->>O: Task interpretation
-
-    O->>O: Select highest-ranked compatible model
-
-    O->>A: Delegate task
-
-    A->>S: Submit GPU job
-
-    S-->>A: Job result
-
-    A-->>O: SUCCESS / FAILED
-
-    alt SUCCESS
-        O->>M: Process separated audio
-        M->>P: Final processing
-        P-->>B: Callback + final result
-        B-->>F: WebSocket notification
-        F-->>U: Processed audio
-    else FAILED
-        O->>O: Select next ranked model
-    end
-```
-
----
-
-# 🧪 Diagnostics
-
-Validate the configuration and perform a single request-directory scan:
+## 🧪 Diagnostics
 
 ```bash
+# Validate configuration / one worker scan
 python -m llm_agent.orchestrator.wcss_worker \
   --config llm_agent/config.local.yaml \
   --once
-```
 
-Check running Slurm jobs:
-
-```bash
+# Slurm jobs
 squeue -u "$USER"
-```
 
-Inspect a Slurm job:
-
-```bash
+# Job details
 sacct -j JOB_ID \
   --format=JobID,State,ExitCode,Elapsed,MaxRSS
-```
 
-Run local pipeline tests:
-
-```bash
+# Tests
 python -m unittest -v llm_agent.tests.test_pipeline
-```
 
-Build the frontend:
-
-```bash
+# Frontend build
 npm --prefix SoundCraft_frontend run build
 ```
 
----
-
-# 🛠️ Troubleshooting
+Common problems:
 
 | Problem | Possible cause |
 |---|---|
-| `NO_RESOURCES` | GPU resources unavailable or incorrect Slurm configuration |
-| Long `PENDING` | Cluster queue, partition or QoS configuration |
-| `FILE_NOT_FOUND` | Incorrect model, checkpoint or environment path |
-| UI stays on `processing` | WCSS worker is not running or request paths do not match |
-| DeepSeek request fails | Missing/invalid API key or network/API connectivity problem |
-
-If the UI remains in the `processing` state, verify that:
-
-```text
-paths.request_root
-backend.sftp_remote_path
-backend.rsync_remote_path
-```
-
-all point to the same WCSS request directory.
+| `NO_RESOURCES` | No GPU resources or incorrect Slurm configuration |
+| Long `PENDING` | Queue, partition or QoS |
+| `FILE_NOT_FOUND` | Incorrect model/checkpoint path |
+| UI stays on `processing` | Worker or request-path configuration issue |
+| DeepSeek request fails | API key or connectivity problem |
 
 ---
 
-# 📁 Repository structure
+## 📁 Repository structure
 
 ```text
 SoundCraft/
-│
 ├── PostProcessing/
 ├── SoundCraft_backend/
 ├── SoundCraft_frontend/
-│
 ├── agent_bs_roformer/
 ├── demucs/
 ├── llm_agent/
 ├── mixAgent/
-│
 ├── screenshots/
-│   ├── view_1.png
-│   ├── view_2.png
-│   └── view_3.png
-│
 ├── scripts/
-│
 ├── INSTRUKCJA_URUCHOMIENIA.md
 ├── WCSS_ODTWORZENIE.md
-├── manual.md
 ├── requirements-ui.txt
 ├── run_ui.py
 ├── LICENSE
@@ -997,92 +546,46 @@ SoundCraft/
 
 ---
 
-# 🧰 Technology stack
+## 🧰 Technology stack
 
-## AI / orchestration
-
-- DeepSeek
-- LangGraph
-- custom genetic-algorithm-inspired model ranking and selection
-
-## Audio
-
-- BS-RoFormer
-- Demucs
-- Pedalboard
-- digital signal processing
-
-## Backend
-
-- Python
-- FastAPI
-- Uvicorn
-- WebSocket
-- Paramiko
-- SFTP / rsync
-
-## Frontend
-
-- React
-- Vite
-
-## Infrastructure
-
-- WCSS
-- Slurm
-- GPU jobs
-- SSH
+**AI / orchestration:** DeepSeek, LangGraph, custom genetic-algorithm-inspired ranking  
+**Audio:** BS-RoFormer, Demucs, Pedalboard, DSP  
+**Backend:** Python, FastAPI, WebSocket, Paramiko, SFTP / rsync  
+**Frontend:** React, Vite  
+**Infrastructure:** WCSS, Slurm, GPU jobs, SSH
 
 ---
 
-# 📌 Current active pipeline
+## 📌 Current active pipeline
 
 ```mermaid
 flowchart LR
-    D["DeepSeek"]
+    D["DeepSeek"] --> L["LangGraph<br/>Orchestrator"]
 
-    D --> L["LangGraph<br/>Orchestrator"]
-
-    R["Custom genetic-algorithm-inspired<br/>model ranking"] --> L
+    R["Custom genetic-algorithm-inspired<br/>ranking"] --> L
 
     L --> B["BS-RoFormer"]
-
     L --> M["Demucs"]
 
     B --> MX["mixAgent"]
     M --> MX
 
     MX --> DSP["Pedalboard / DSP"]
-
     DSP --> PP["PostProcessing"]
-
     PP --> WAV["Final WAV"]
 ```
 
-> **SAM Audio is currently excluded from the active processing pipeline.**
+---
+
+## 📚 Documentation
+
+- [Setup and deployment](INSTRUKCJA_URUCHOMIENIA.md)
+- [LLM orchestrator](llm_agent/README.md)
+- [WCSS environment recreation](WCSS_ODTWORZENIE.md)
+- [Additional documentation](manual.md)
 
 ---
 
-# 📚 Documentation
-
-Detailed setup and deployment instructions:
-
-[INSTRUKCJA_URUCHOMIENIA.md](INSTRUKCJA_URUCHOMIENIA.md)
-
-LLM orchestrator documentation:
-
-[llm_agent/README.md](llm_agent/README.md)
-
-WCSS environment recreation:
-
-[WCSS_ODTWORZENIE.md](WCSS_ODTWORZENIE.md)
-
-Additional project documentation:
-
-[manual.md](manual.md)
-
----
-
-# 📜 License
+## 📜 License
 
 SoundCraft is licensed under the [MIT License](LICENSE).
